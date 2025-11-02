@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { SocialController } from './social.controller';
+import { SocialController } from '../social.controller';
 
 describe('SocialController', () => {
   let controller: SocialController;
