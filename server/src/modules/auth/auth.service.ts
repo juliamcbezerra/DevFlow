@@ -21,11 +21,15 @@ export class AuthService {
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(data.password, saltRounds);
 
-        // 3. Salvar o novo usuário no banco
-        const user = await this.auth.signup(data)
+        // 3. Substituir senha original pela hasheada
+        const newUserData = {...data, password: hashedPassword};
 
-        // 4. Retornar o usuário criado (sem a senha)
+        // 4. Salvar o novo usuário no banco
+        const user = await this.auth.signup(newUserData);
+
+        // 5. Retornar o usuário criado (sem a senha)
         const { password, ...result } = user;
+        
         return result;
     }
 }
