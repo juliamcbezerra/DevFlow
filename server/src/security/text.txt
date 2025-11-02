@@ -1,0 +1,3 @@
+A gente vai usar essa pasta pra colocar guards pra limitar acesso em rotas que precisa de autenticações e afins.
+
+Token too e pa

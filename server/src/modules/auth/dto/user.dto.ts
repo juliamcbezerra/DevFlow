@@ -6,6 +6,14 @@ import {
     MinLength,
 } from 'class-validator';
 
+export interface UserDto {
+    id: string;
+    email: string;
+    name: string | null;
+    password: string;
+    createdAt: Date;
+}
+
 export class CreateUserDto {
     @IsEmail()
     @IsNotEmpty()
