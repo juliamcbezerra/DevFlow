@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "${SERVER_PORT}:3333"
+      - "5555:5555"
     env_file:
       - ./server/.env
     volumes:
