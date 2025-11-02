@@ -1,0 +1,28 @@
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "${SERVER_PORT}:3333"
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev
+    depends_on:
+      - db
+
+  db:
+    container_name: devflow_db
+    image: bitnami/postgresql:latest
+    ports:
+      - "${DB_PORT}:5432"
+    env_file:
+    - ./.env
+    volumes:
+      - postgresql_data:/bitnami/postgresql
+
+volumes:
+  postgresql_data: {}
