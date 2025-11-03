@@ -28,3 +28,20 @@ export class CreateUserDto {
     @MinLength(8, {message: 'A senha deve ter pelo menos 8 caracteres' })
     password: string;
 }
+
+export class SessionDto {
+    userId: string;
+    accessToken: string;
+    refreshToken: string;
+}
+
+export class LoginSessionDto {
+    @IsEmail()
+    @IsNotEmpty()
+    email: string;
+
+    @IsString()
+    @IsNotEmpty()
+    @MinLength(8, {message: 'A senha possui pelo menos 8 caracteres' })
+    password: string;
+}
