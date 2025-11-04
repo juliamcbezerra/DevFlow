@@ -1,11 +1,15 @@
-import { Injectable, ConflictException } from '@nestjs/common';
-import { CreateUserDto } from 'src/modules/auth/dto/user.dto';
+import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { CreateUserDto, LoginSessionDto, SessionDto } from 'src/modules/auth/dto/user.dto';
 import * as bcrypt from 'bcrypt';
 import { IAuthRepository } from './auth-interface';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
-    constructor(private auth: IAuthRepository) {}
+    constructor(
+        private auth: IAuthRepository,
+        private jwtService: JwtService,
+    ) {}
 
         // @param
 
@@ -13,19 +17,50 @@ export class AuthService {
         // 1. Checar se o usuário já existe
         const userExists = await this.auth.findByEmail(data.email);
 
-        if (userExists) {
-            throw new ConflictException('Email já cadastrado');
-        }
-
+        if (userExists) throw new ConflictException('Email já cadastrado');
+        
         // 2. Hashear a senha (Implementando AUTH-03)
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(data.password, saltRounds);
 
-        // 3. Salvar o novo usuário no banco
-        const user = await this.auth.signup(data)
+        // 3. Substituir senha original pela hasheada
+        const newUserData = {...data, password: hashedPassword};
 
-        // 4. Retornar o usuário criado (sem a senha)
+        // 4. Salvar o novo usuário no banco
+        const user = await this.auth.signup(newUserData);
+
+        // 5. Retornar o usuário criado (sem a senha)
         const { password, ...result } = user;
+
         return result;
+    }
+
+    async signIn(data: LoginSessionDto) {
+        // 1. Checa se existe o usuário
+        const user = await this.auth.findByEmail(data.email);
+
+        if(!user) throw new UnauthorizedException('Credenciais inválidas');
+
+        // 2. Checa se a senha está correta
+        const isPasswordValid = await bcrypt.compare(data.password, user.password);
+        if(!isPasswordValid) throw new UnauthorizedException('Credenciais inválidas');
+        
+        // 3. Cria os tokens
+        const payload = { sub: user.id, email: user.email };
+
+        const accessToken = await this.jwtService.sign(payload, { expiresIn: '1h'});
+        const refreshToken = await this.jwtService.sign(payload, { expiresIn: '15d'});
+        
+        // 4. Cria sessão no banco
+        const sessionData: SessionDto = {
+            userId: user.id,
+            accessToken,
+            refreshToken,
+        };
+
+        const session = await this.auth.signin(sessionData);
+        
+        // 5. Retornar usuário logado 
+        return { userId: session.userId };
     }
 }
