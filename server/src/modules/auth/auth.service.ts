@@ -3,6 +3,7 @@ import { CreateUserDto, LoginSessionDto, SessionDto } from 'src/modules/auth/dto
 import * as bcrypt from 'bcrypt';
 import { IAuthRepository } from './auth-interface';
 import { JwtService } from '@nestjs/jwt';
+import type { Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -35,7 +36,7 @@ export class AuthService {
         return result;
     }
 
-    async signIn(data: LoginSessionDto) {
+    async signIn(data: LoginSessionDto, res: Response) {
         // 1. Checa se existe o usuário
         const user = await this.auth.findByEmail(data.email);
 
@@ -51,6 +52,20 @@ export class AuthService {
         const accessToken = await this.jwtService.sign(payload, { expiresIn: '1h'});
         const refreshToken = await this.jwtService.sign(payload, { expiresIn: '15d'});
         
+        res.cookie('access_token', accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 1000, // 1 hora
+        });
+
+        res.cookie('refresh_token', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 15 * 24 * 60 * 60 * 1000, // 15 dias
+        });
+
         // 4. Cria sessão no banco
         const sessionData: SessionDto = {
             userId: user.id,
@@ -61,6 +76,9 @@ export class AuthService {
         const session = await this.auth.signin(sessionData);
         
         // 5. Retornar usuário logado 
-        return { userId: session.userId };
+        return { 
+            message: 'Login bem-sucedido',
+            userId: session.userId
+        };
     }
 }
