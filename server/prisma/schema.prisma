@@ -24,7 +24,7 @@ model User {
 model Session {
   id              String    @id @default(uuid())
   userId          String
-  accessToken     String
+  accessToken     String    @unique
   refreshToken    String
   createdAt       DateTime  @default(now())
 
