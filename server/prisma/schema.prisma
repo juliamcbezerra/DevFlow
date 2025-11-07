@@ -18,6 +18,18 @@ model User {
 
   // Relações
   projects Project[]
+  sessions Session[]
+}
+
+model Session {
+  id              String    @id @default(uuid())
+  userId          String
+  accessToken     String    @unique
+  refreshToken    String
+  createdAt       DateTime  @default(now())
+
+  // Relações
+  user            User      @relation(fields: [userId], references: [id])
 }
 
 model Project {

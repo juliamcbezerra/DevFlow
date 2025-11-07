@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "${SERVER_PORT}:3333"
+      - "5555:5555"
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server:/usr/src/app
+      - server_node_modules:/usr/src/app/node_modules
+    command: npm run start:dev
+    depends_on:
+      db: 
+        condition: service_healthy 
+
+  db:
+    container_name: devflow_db
+    image: postgres:15
+    ports:
+      - "${DB_PORT}:5432"
+    env_file:
+      - ./.env
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgresql_data: {}
+  server_node_modules: {}
