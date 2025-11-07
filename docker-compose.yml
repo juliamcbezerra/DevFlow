@@ -18,6 +18,19 @@ services:
       db: 
         condition: service_healthy 
 
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "${CLIENT_PORT}:5173"
+    env_file:
+      - ./client/.env
+    volumes:
+      - ./client:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run dev
+
   db:
     container_name: devflow_db
     image: postgres:15
