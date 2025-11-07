@@ -2,13 +2,11 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import { IAuthRepository } from '../auth-interface';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto, SessionDto, UserDto } from '../dto/user.dto';
-import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class PrismaAuthRepository implements IAuthRepository {
   constructor(
     private readonly prisma: PrismaService, 
-    private jwtService: JwtService
   ) {}
 
   async signup(data: CreateUserDto): Promise<UserDto> {
