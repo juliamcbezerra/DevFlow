@@ -7,7 +7,11 @@ async function bootstrap() {
 
   const port = process.env.SERVER_PORT || 3333;
 
-  app.enableCors();
+  app.enableCors({
+    origin: 'http://localhost:3000',
+    credentials: true,
+  });
+  
   app.use(cookieParser());
 
   await app.listen(port);
