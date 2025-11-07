@@ -1,6 +1,6 @@
 // server/src/modules/project/project.service.ts
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service'; 
+import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 
 @Injectable()
@@ -27,8 +27,25 @@ export class ProjectService {
           },
         },
       },
-    });
+    }); // <-- O 'create' do Prisma termina aqui
 
     return newProject;
+  } // <-- A FUNÇÃO 'createProject' TERMINA AQUI
+
+  /**
+   * LÓGICA PARA [PROJ-02] (É SÓ ISTO!)
+   * @param userId O ID do utilizador logado (vem do token JWT)
+  */
+  async findMyProjects(userId: string) {
+    // Encontra todos os projetos onde o ownerId é o ID do utilizador
+    return this.prisma.project.findMany({
+      where: {
+        ownerId: userId,
+      },
+      orderBy: {
+        createdAt: 'desc', // Opcional: mostra os mais novos primeiro
+      },
+    });
   }
-}
+  
+} // <-- A CLASSE 'ProjectService' TERMINA AQUI
