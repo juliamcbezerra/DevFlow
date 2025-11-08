@@ -1,11 +1,11 @@
 ﻿import React from 'react'
-import Button from './components/Button'
+import Botao from './components/Botao'
 
 export default function App() {
   return (
     <div style={{ display: 'flex', gap: '12px', padding: '24px' }}>
-      <Button label="Converter em Tarefa" variant="primary" />
-      <Button label="Ver Detalhes" variant="secondary" />
+      <Botao label="Converter em Tarefa" variant="primario" />
+      <Botao label="Ver Detalhes" variant="secundario" />
     </div>
   )
 }
