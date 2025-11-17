@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { VoteDto } from './dto/vote.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
 
 @Injectable()
 export class SocialService {
@@ -102,6 +103,36 @@ export class SocialService {
         userId,
         postId,
       },
+    });
+  }
+
+/**
+   * SOC-14: Criar Comentário
+   */
+  async createComment(userId: string, postId: string, dto: CreateCommentDto) {
+    return this.prisma.comment.create({
+      data: {
+        content: dto.content,
+        postId,
+        authorId: userId,
+        // Futuro: parentId: dto.parentId
+      },
+      include: {
+        author: { select: { name: true, id: true } } // Retorna logo o autor para a UI atualizar
+      }
+    });
+  }
+
+  /**
+   * SOC-15: Listar Comentários de um Post
+   */
+  async findCommentsByPost(postId: string) {
+    return this.prisma.comment.findMany({
+      where: { postId },
+      orderBy: { createdAt: 'asc' }, // Mais antigos primeiro (ordem cronológica)
+      include: {
+        author: { select: { name: true, id: true } }
+      }
     });
   }
 }

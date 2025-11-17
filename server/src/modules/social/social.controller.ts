@@ -12,6 +12,7 @@ import {
 import { SocialService } from './social.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { VoteDto } from './dto/vote.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
 import { JwtGuard } from '../jwt/jwt.guard';
 
 @Controller('projects') // Prefixo 'projects' para seguir a hierarquia REST
@@ -55,5 +56,29 @@ export class SocialController {
     @Req() req: any,
   ) {
     return this.socialService.toggleVote(req.user.id, postId, dto);
+  }
+
+/**
+   * SOC-14: Adicionar Comentário
+   * Rota: POST /posts/:postId/comments
+   */
+  @UseGuards(JwtGuard)
+  @Post('posts/:postId/comments')
+  async createComment(
+    @Param('postId') postId: string,
+    @Body(ValidationPipe) dto: CreateCommentDto,
+    @Req() req: any,
+  ) {
+    return this.socialService.createComment(req.user.id, postId, dto);
+  }
+
+  /**
+   * SOC-15: Ver Comentários
+   * Rota: GET /posts/:postId/comments
+   */
+  @UseGuards(JwtGuard)
+  @Get('posts/:postId/comments')
+  async getComments(@Param('postId') postId: string) {
+    return this.socialService.findCommentsByPost(postId);
   }
 }
