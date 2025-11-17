@@ -135,4 +135,30 @@ export class SocialService {
       }
     });
   }
+
+/**
+   * SOC-04: Buscar um Post específico pelo ID
+   */
+  async findPostById(postId: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        _count: {
+          select: {
+            comments: true,
+            votes: true,
+          },
+        },
+      },
+    });
+
+    return post;
+  }
 }

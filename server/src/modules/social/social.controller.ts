@@ -7,7 +7,8 @@ import {
   UseGuards,
   Req,
   ValidationPipe,
-  Get,  
+  Get,
+  NotFoundException, 
 } from '@nestjs/common';
 import { SocialService } from './social.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -80,5 +81,21 @@ export class SocialController {
   @Get('posts/:postId/comments')
   async getComments(@Param('postId') postId: string) {
     return this.socialService.findCommentsByPost(postId);
+  }
+
+  /**
+   * SOC-04: Ver Detalhes de um Post
+   * Rota: GET /posts/:postId
+   */
+  @UseGuards(JwtGuard)
+  @Get('posts/:postId')
+  async getPost(@Param('postId') postId: string) {
+    const post = await this.socialService.findPostById(postId);
+    
+    if (!post) {
+      throw new NotFoundException('Post não encontrado.');
+    }
+
+    return post;
   }
 }
