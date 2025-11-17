@@ -15,7 +15,7 @@ import { VoteDto } from './dto/vote.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { JwtGuard } from '../jwt/jwt.guard';
 
-@Controller('projects') // Prefixo 'projects' para seguir a hierarquia REST
+@Controller() // Prefixo 'projects' para seguir a hierarquia REST
 export class SocialController {
   constructor(private readonly socialService: SocialService) {}
 
@@ -24,7 +24,7 @@ export class SocialController {
    * Rota: POST /projects/:projectId/posts
    */
   @UseGuards(JwtGuard)
-  @Post(':projectId/posts')
+  @Post('projects/:projectId/posts')
   async createPost(
     @Param('projectId') projectId: string, // Pega o ID da URL
     @Body(ValidationPipe) dto: CreatePostDto,
@@ -39,7 +39,7 @@ export class SocialController {
    * Rota: GET /projects/:projectId/posts
    */
   @UseGuards(JwtGuard) // Opcional: Se quiser que o feed seja público, remova esta linha
-  @Get(':projectId/posts')
+  @Get('projects/:projectId/posts')
   async findAll(@Param('projectId') projectId: string) {
     return this.socialService.findAllByProject(projectId);
   }
