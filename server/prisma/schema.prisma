@@ -9,36 +9,145 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// --- ENUMS (Tipos fixos) ---
+
+enum PostType {
+  TEXT
+  CODE_SNIPPET
+  POLL
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+// --- MODELOS PRINCIPAIS ---
+
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
+  id        String   @id @default(uuid())
+  email     String   @unique
   name      String?
-  password  String    
-  createdAt DateTime  @default(now())
+  password  String
+  createdAt DateTime @default(now())
 
   // Relações
   projects Project[]
   sessions Session[]
+  
+  // Relações Sociais
+  posts    Post[]
+  comments Comment[]
+  votes    Vote[]
 }
 
 model Session {
-  id              String    @id @default(uuid())
-  userId          String
-  accessToken     String    @unique
-  refreshToken    String
-  createdAt       DateTime  @default(now())
+  id           String   @id @default(uuid())
+  userId       String
+  accessToken  String   @unique
+  refreshToken String
+  createdAt    DateTime @default(now())
 
   // Relações
-  user            User      @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Project {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   name        String
   description String?
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime @default(now())
 
   // Relações
-  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  ownerId   String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String
+
+  // Conteúdo do Projeto
+  posts Post[] // O Feed do Projeto
+  tasks Task[] // O Kanban do Projeto
+}
+
+// --- MODELOS DO "ESPAÇO DE TRABALHO" (KANBAN) ---
+
+model Task {
+  id          String     @id @default(uuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relações
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  @@index([projectId])
+}
+
+// --- MODELOS SOCIAIS (FEED TIPO REDDIT) ---
+
+model Post {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  title   String
+  content Json     // Suporta blocos de texto, código ou enquetes
+  type    PostType @default(TEXT)
+  isPAP   Boolean  @default(false) // "Post de Abertura do Projeto"
+
+  // Relações
+  author    User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  comments Comment[]
+  votes    Vote[]
+
+  @@index([authorId])
+  @@index([projectId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  content   String
+
+  // Relações
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId String
+  post     Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId   String
+
+  // Respostas Aninhadas (Nested Replies)
+  parent   Comment?  @relation("NestedComments", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId String?
+  replies  Comment[] @relation("NestedComments")
+
+  votes Vote[]
+
+  @@index([postId])
+  @@index([parentId])
+}
+
+model Vote {
+  id String @id @default(uuid())
+
+  value Int // +1 (Upvote) ou -1 (Downvote)
+
+  // Quem votou
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  // Onde votou (Post ou Comentário)
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId String?
+
+  // Restrição: Um usuário só pode votar uma vez em cada item
+  @@unique([userId, postId])
+  @@unique([userId, commentId])
 }
