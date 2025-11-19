@@ -91,6 +91,7 @@ model Post {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime?
 
   title   String
   content Json     // Suporta blocos de texto, código ou enquetes

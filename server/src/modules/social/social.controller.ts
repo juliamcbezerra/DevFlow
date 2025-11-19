@@ -9,21 +9,22 @@ import {
   ValidationPipe,
   Get,
   NotFoundException, 
+  Patch,
+  Delete,
+  ForbiddenException,
 } from '@nestjs/common';
 import { SocialService } from './social.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { VoteDto } from './dto/vote.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
 import { JwtGuard } from '../jwt/jwt.guard';
 
 @Controller() // Prefixo 'projects' para seguir a hierarquia REST
 export class SocialController {
   constructor(private readonly socialService: SocialService) {}
 
-  /**
-   * SOC-01: Criar um Post num Projeto
-   * Rota: POST /projects/:projectId/posts
-   */
+  //Criar um novo Post
   @UseGuards(JwtGuard)
   @Post('projects/:projectId/posts')
   async createPost(
@@ -35,20 +36,14 @@ export class SocialController {
     return this.socialService.createPost(dto, userId, projectId);
   }
 
-  /**
-   * SOC-02: Ver o Feed de Posts
-   * Rota: GET /projects/:projectId/posts
-   */
+  //Buscar o Feed do Projeto
   @UseGuards(JwtGuard) // Opcional: Se quiser que o feed seja público, remova esta linha
   @Get('projects/:projectId/posts')
   async findAll(@Param('projectId') projectId: string) {
     return this.socialService.findAllByProject(projectId);
   }
 
-/**
-   * SOC-10: Votar num Post
-   * Rota: POST /posts/:postId/vote
-   */
+  //Votar/Desvotar num Post
   @UseGuards(JwtGuard)
   @Post('posts/:postId/vote') // Note que a rota começa em 'posts', não 'projects'
   async vote(
@@ -59,10 +54,7 @@ export class SocialController {
     return this.socialService.toggleVote(req.user.id, postId, dto);
   }
 
-/**
-   * SOC-14: Adicionar Comentário
-   * Rota: POST /posts/:postId/comments
-   */
+  //Criar um Comentário num Post
   @UseGuards(JwtGuard)
   @Post('posts/:postId/comments')
   async createComment(
@@ -73,20 +65,14 @@ export class SocialController {
     return this.socialService.createComment(req.user.id, postId, dto);
   }
 
-  /**
-   * SOC-15: Ver Comentários
-   * Rota: GET /posts/:postId/comments
-   */
+  //Buscar Comentários de um Post
   @UseGuards(JwtGuard)
   @Get('posts/:postId/comments')
   async getComments(@Param('postId') postId: string) {
     return this.socialService.findCommentsByPost(postId);
   }
 
-  /**
-   * SOC-04: Ver Detalhes de um Post
-   * Rota: GET /posts/:postId
-   */
+  //Buscar um Post pelo ID
   @UseGuards(JwtGuard)
   @Get('posts/:postId')
   async getPost(@Param('postId') postId: string) {
@@ -97,5 +83,31 @@ export class SocialController {
     }
 
     return post;
+  }
+
+  // Atualizar um post
+  @UseGuards(JwtGuard)
+  @Patch('posts/:postId')
+  async update(
+    @Param('postId') postId: string,
+    @Body(ValidationPipe) dto: UpdatePostDto,
+    @Req() req: any,
+  ) {
+    try {
+      return await this.socialService.updatePost(req.user.id, postId, dto);
+    } catch (error) {
+      // Tratamento de erro simples
+      throw new ForbiddenException(error.message);
+    }
+  }
+  // Deletar um post
+  @UseGuards(JwtGuard)
+  @Delete('posts/:postId')
+  async remove(@Param('postId') postId: string, @Req() req: any) {
+    try {
+      return await this.socialService.removePost(req.user.id, postId);
+    } catch (error) {
+      throw new ForbiddenException(error.message);
+    }
   }
 }

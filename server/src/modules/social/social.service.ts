@@ -4,14 +4,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { VoteDto } from './dto/vote.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
 
 @Injectable()
 export class SocialService {
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * SOC-01: Criar um novo Post
-   */
+  //Criar um novo Post
   async createPost(dto: CreatePostDto, userId: string, projectId: string) {
     // Se for um PAP, verificamos se já existe um (opcional, regra de negócio)
     // Por agora, vamos apenas criar.
@@ -34,13 +33,12 @@ export class SocialService {
     });
   }
 
-  /**
-   * SOC-02: Buscar o Feed do Projeto
-   */
+  //Buscar o Feed do Projeto
   async findAllByProject(projectId: string) {
     return this.prisma.post.findMany({
       where: {
-        projectId: projectId, // Filtra pelo projeto atual
+        projectId: projectId,
+        deletedAt: null, // Filtra pelo projeto atual
       },
       // Ordenação: Posts mais recentes primeiro (topo da lista)
       orderBy: [
@@ -66,9 +64,8 @@ export class SocialService {
       },
     });
   }
-/**
-   * SOC-10: Lógica de Toggle Vote (Upvote/Downvote)
-   */
+
+  //Lógica de Toggle Vote (Upvote/Downvote)
   async toggleVote(userId: string, postId: string, dto: VoteDto) {
     // 1. Verificar se já existe um voto deste user neste post
     const existingVote = await this.prisma.vote.findUnique({
@@ -106,9 +103,7 @@ export class SocialService {
     });
   }
 
-/**
-   * SOC-14: Criar Comentário
-   */
+  //Criar Comentário
   async createComment(userId: string, postId: string, dto: CreateCommentDto) {
     return this.prisma.comment.create({
       data: {
@@ -123,9 +118,7 @@ export class SocialService {
     });
   }
 
-  /**
-   * SOC-15: Listar Comentários de um Post
-   */
+  //Listar Comentários de um Post
   async findCommentsByPost(postId: string) {
     return this.prisma.comment.findMany({
       where: { postId },
@@ -136,9 +129,7 @@ export class SocialService {
     });
   }
 
-/**
-   * SOC-04: Buscar um Post específico pelo ID
-   */
+  //Buscar um Post específico pelo ID
   async findPostById(postId: string) {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
@@ -160,5 +151,36 @@ export class SocialService {
     });
 
     return post;
+  }
+
+async updatePost(userId: string, postId: string, dto: UpdatePostDto) {
+    // Primeiro: Verifica se o post existe e pertence ao user
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+
+    if (!post) throw new Error('Post não encontrado'); // O Controller vai tratar erros melhor depois
+    if (post.authorId !== userId) throw new Error('Você não tem permissão para editar este post');
+
+    return this.prisma.post.update({
+      where: { id: postId },
+      data: {
+        title: dto.title,
+        content: dto.content,
+        // Não permitimos mudar o type ou isPAP por segurança de negócio
+      },
+    });
+  }
+
+  async removePost(userId: string, postId: string) {
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+
+    if (!post) throw new Error('Post não encontrado');
+    
+    // Regra: Só o Autor OU o Dono do Projeto podem apagar (Futuro: Implementar check de dono do projeto)
+    if (post.authorId !== userId) throw new Error('Você não tem permissão para apagar este post');
+
+    return this.prisma.post.update({
+      where: { id: postId },
+      data: { deletedAt: new Date() }, // Marca a hora da deleção
+    });
   }
 }
