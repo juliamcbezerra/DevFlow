@@ -1,20 +1,32 @@
-﻿import React from 'react'
-import Botao from './components/Botao'
-import Input from './components/Input'
+﻿import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { PrivateRoute } from './routes/PrivateRoute';
 
-export default function App() {
-  const [texto, setTexto] = React.useState("")
+// Componentes (Placeholders) - A equipe vai substituir estes arquivos reais
+const Login = () => <div className="flex items-center justify-center h-screen text-black bg-white">Página de Login</div>;
+const Register = () => <div className="flex items-center justify-center h-screen text-black bg-white">Página de Cadastro</div>;
+const Feed = () => <div className="flex items-center justify-center h-screen text-white bg-zinc-900">Feed Principal</div>;
 
+function App() {
   return (
-    <div style={{ display: 'flex', gap: '12px', padding: '24px', width: '100%', maxWidth: '600px' }}>
-      <Botao label="Converter em Tarefa" variant="primario" />
-      <Botao label="Ver Detalhes" variant="secundario" />
-
-      <Input 
-        placeholder="Digite algo..." 
-        value={texto} 
-        onChange={(e) => setTexto(e.target.value)} 
-      />
-    </div>
-  )
+    <BrowserRouter>
+      <AuthProvider>
+        <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900 font-sans text-zinc-900 dark:text-zinc-100">
+          <Routes>
+            {/* Rotas Públicas */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Register />} />
+            
+            {/* Rotas Protegidas */}
+            <Route element={<PrivateRoute />}>
+              <Route path="/feed" element={<Feed />} />
+              <Route path="/" element={<Navigate to="/feed" replace />} />
+            </Route>
+          </Routes>
+        </div>
+      </AuthProvider>
+    </BrowserRouter>
+  );
 }
+
+export default App;
