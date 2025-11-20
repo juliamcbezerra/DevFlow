@@ -40,6 +40,7 @@ model User {
   posts    Post[]
   comments Comment[]
   votes    Vote[]
+  follows FollowProject[]
 }
 
 model Session {
@@ -66,6 +67,7 @@ model Project {
   // Conteúdo do Projeto
   posts Post[] // O Feed do Projeto
   tasks Task[] // O Kanban do Projeto
+  followers FollowProject[]
 }
 
 // --- MODELOS DO "ESPAÇO DE TRABALHO" (KANBAN) ---
@@ -151,4 +153,16 @@ model Vote {
   // Restrição: Um usuário só pode votar uma vez em cada item
   @@unique([userId, postId])
   @@unique([userId, commentId])
+}
+
+model FollowProject {
+  id        String   @id @default(uuid())
+  userId    String
+  projectId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId]) // não permite seguir o mesmo projeto mais de uma vez
 }
