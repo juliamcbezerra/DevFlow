@@ -4,9 +4,11 @@ type BotaoProps = {
   label: string
   onClick?: () => void
   variant?: 'primario' | 'secundario'
+  type?: 'button' | 'submit' | 'reset'
+  disabled?: boolean
 }
 
-const Botao = ({ label, onClick, variant = 'primario' }: BotaoProps) => {
+const Botao = ({ label, onClick, variant = 'primario', type = 'button', disabled = false }: BotaoProps) => {
   // estilo base do botao
   const estiloBase: React.CSSProperties = {
     padding: '12px 16px',
@@ -49,25 +51,28 @@ const Botao = ({ label, onClick, variant = 'primario' }: BotaoProps) => {
   const [hover, setHover] = React.useState(false)
   const [ativo, setAtivo] = React.useState(false)
 
-  // combinacao de estilos dinamicos
+  // combina os estilos: base + variante + hover + ativo + disabled
   const estiloFinal = {
     ...estiloBase,
     ...variantes[variant],
-    ...(hover ? estilosHover[variant] : {}),
-    ...(ativo ? estilosAtivo[variant] : {}),
+    ...(hover && !disabled ? estilosHover[variant] : {}),
+    ...(ativo && !disabled ? estilosAtivo[variant] : {}),
+    ...(disabled ? { opacity: 0.5, cursor: 'not-allowed' } : {}),
   }
 
   return (
     <button
+      type={type}
       onClick={onClick}
+      disabled={disabled}
       style={estiloFinal}
-      onMouseEnter={() => setHover(true)}
+      onMouseEnter={() => !disabled && setHover(true)}
       onMouseLeave={() => {
         setHover(false)
         setAtivo(false)
       }}
-      onMouseDown={() => setAtivo(true)}
-      onMouseUp={() => setAtivo(false)}
+      onMouseDown={() => !disabled && setAtivo(true)}
+      onMouseUp={() => !disabled && setAtivo(false)}
     >
       {label}
     </button>
