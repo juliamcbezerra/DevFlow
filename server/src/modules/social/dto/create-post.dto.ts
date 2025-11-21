@@ -1,5 +1,5 @@
 // server/src/modules/social/dto/create-post.dto.ts
-import { IsBoolean, IsEnum, IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsNotEmpty, IsObject, IsOptional, IsString, IsArray } from 'class-validator';
 import { PostType } from '@prisma/client'; 
 import { ApiProperty } from '@nestjs/swagger'; 
 
@@ -41,4 +41,9 @@ export class CreatePostDto {
   @IsBoolean()
   @IsOptional()
   isPAP?: boolean;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  images: string[];
 }
