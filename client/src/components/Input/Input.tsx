@@ -4,9 +4,10 @@ type InputProps = {
   placeholder?: string
   value?: string
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
+  type?: 'text' | 'email' | 'password' | 'number' | 'tel'
 }
 
-const Input = ({ placeholder, value, onChange }: InputProps) => {
+const Input = ({ placeholder, value, onChange, type = 'text' }: InputProps) => {
   // estados de hover e foco
   const [hover, setHover] = React.useState(false)
   const [focado, setFocado] = React.useState(false)
@@ -16,19 +17,19 @@ const Input = ({ placeholder, value, onChange }: InputProps) => {
     width: '100%',                     // responsivo
     padding: '12px 14px',
     borderRadius: '6px',
-    border: '1px solid #D9D9D9',
-    backgroundColor: '#FFFFFF',
+    border: '1px solid #404854',
+    backgroundColor: '#2d2d44',
     outline: 'none',
     fontSize: '16px',
     transition: 'all 0.15s ease-in-out',
     fontFamily: 'inherit',
-    color: '#333',
+    color: '#ffffff',
     boxSizing: 'border-box',           // responsivo: impede que padding aumente largura
   }
 
   // estilo quando o mouse passa por cima
   const estiloHover: React.CSSProperties = {
-    borderColor: '#C5C5C5',
+    borderColor: '#a78bfa',
   }
 
   // estilo quando o input esta focado
@@ -46,7 +47,7 @@ const Input = ({ placeholder, value, onChange }: InputProps) => {
 
   return (
     <input
-      type="text"
+      type={type}
       placeholder={placeholder}
       value={value}                    
       onChange={onChange}              

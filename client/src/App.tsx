@@ -1,20 +1,16 @@
 ﻿import React from 'react'
-import Botao from './components/Botao'
-import Input from './components/Input'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import SignupPage from './pages/Signup/Signup'
+import LoginPage from './pages/Login/Login'
 
 export default function App() {
-  const [texto, setTexto] = React.useState("")
-
   return (
-    <div style={{ display: 'flex', gap: '12px', padding: '24px', width: '100%', maxWidth: '600px' }}>
-      <Botao label="Converter em Tarefa" variant="primario" />
-      <Botao label="Ver Detalhes" variant="secundario" />
-
-      <Input 
-        placeholder="Digite algo..." 
-        value={texto} 
-        onChange={(e) => setTexto(e.target.value)} 
-      />
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<Navigate to="/signup" replace />} />
+      </Routes>
+    </Router>
   )
 }
