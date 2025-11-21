@@ -26,11 +26,12 @@ enum TaskStatus {
 // --- MODELOS PRINCIPAIS ---
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  password  String
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  email      String   @unique
+  name       String?
+  password   String
+  createdAt  DateTime @default(now())
+  profilePic String?
 
   // Relações
   projects Project[]
@@ -54,10 +55,12 @@ model Session {
 }
 
 model Project {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  createdAt   DateTime @default(now())
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  createdAt    DateTime @default(now())
+  bannerImage  String?
+  projectImage String?
 
   // Relações
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -92,6 +95,7 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
+  images    String[]
 
   title   String
   content Json     // Suporta blocos de texto, código ou enquetes

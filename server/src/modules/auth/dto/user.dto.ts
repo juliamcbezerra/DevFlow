@@ -4,8 +4,10 @@ import {
   IsNotEmpty,
   IsString,
   MinLength,
+  IsOptional,
+  IsUrl,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger'; 
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'; 
 
 // Interface não precisa de decorator do Swagger, pois não é usada diretamente na validação
 export interface UserDto {
@@ -14,6 +16,7 @@ export interface UserDto {
   name: string | null;
   password: string;
   createdAt: Date;
+  profilePic: string | null;
 }
 
 export class CreateUserDto {
@@ -42,6 +45,15 @@ export class CreateUserDto {
   @IsNotEmpty()
   @MinLength(8, { message: 'A senha deve ter pelo menos 8 caracteres' })
   password: string;
+
+  @ApiPropertyOptional({
+    description: 'URL da foto de perfil (retornada pelo endpoint de upload)',
+    example: 'https://meu-bucket-s3.amazonaws.com/avatar-123.jpg',
+  })
+  @IsOptional()
+  @IsString()
+  @IsUrl({}, { message: 'A foto de perfil deve ser uma URL válida' })
+  profilePic?: string;
 }
 
 // Esta classe define o que o Backend RESPONDE. É útil documentar também!
