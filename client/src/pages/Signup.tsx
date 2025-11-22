@@ -1,94 +1,149 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { SignupForm, FormDataCadastro } from '../components/auth/signup-form/SignupForm';
-import  api  from '../services/api'; // Importamos a api direta para cadastro
+import api from '../services/api'; 
 import { useAuth } from '../context/AuthContext';
 
 export default function SignupPage() {
   const navigate = useNavigate();
-  const { signIn } = useAuth(); // Para logar automaticamente após cadastro (opcional)
+  const { signIn } = useAuth(); 
   
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-// ...
 
   const handleSignup = async (dados: FormDataCadastro) => {
     try {
       setError('');
       setLoading(true);
 
-      // 1. Backend Call
       await api.post('/users', {
         name: dados.nome + ' ' + dados.sobrenome,
         email: dados.email,
-        password: dados.password, // AGORA ESTÁ ALINHADO (era dados.senha)
+        password: dados.password,
       });
 
-      // 2. Auto Login
-      await signIn({ email: dados.email, password: dados.password }); // ALINHADO
+      await signIn({ email: dados.email, password: dados.password });
       navigate('/feed');
 
     } catch (err: any) {
-      // ...
+      const msg = err.response?.data?.message || 'Erro ao criar conta.';
+      setError(Array.isArray(msg) ? msg[0] : msg);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
+    <div className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-zinc-950">
       
-      {/* --- COLUNA ESQUERDA (Formulário) --- */}
-      <div className="flex flex-col items-center justify-center bg-zinc-950 p-6 sm:p-12 order-2 md:order-1">
+      {/* --- COLUNA ESQUERDA: FORMULÁRIO (Antítese ao Login) --- */}
+      <div className="flex flex-col items-center justify-center p-8 sm:p-24 order-1 bg-zinc-950">
         <div className="w-full max-w-md space-y-8">
           
-          {/* Header Mobile */}
-          <div className="md:hidden text-center mb-8">
-            <h1 className="text-3xl font-bold text-white">DevFlow</h1>
-            <p className="text-zinc-400 text-sm">Junte-se à comunidade</p>
-          </div>
-
-          <div className="text-center hidden md:block">
-            <h2 className="text-3xl font-bold text-zinc-100 tracking-tight">Crie sua conta</h2>
-            <p className="mt-2 text-sm text-zinc-400">
-              Comece a compartilhar conhecimento hoje mesmo.
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold text-white tracking-tight">Crie sua conta</h2>
+            <p className="text-zinc-400">
+              Preencha seus dados para entrar na comunidade.
             </p>
           </div>
 
-          {/* O Componente de Formulário Refatorado */}
           <SignupForm 
             onSubmit={handleSignup} 
             isLoading={loading} 
             error={error} 
           />
 
+          <p className="text-center text-xs text-zinc-500 mt-8">
+            Ao se registrar, você concorda com nossos Termos de Uso.
+          </p>
         </div>
       </div>
 
-      {/* --- COLUNA DIREITA (Branding / Visual) --- */}
-      {/* Hidden no mobile, Flex no desktop. Order mudada para ficar na direita */}
-      <div className="hidden md:flex flex-col items-center justify-center relative bg-zinc-900 overflow-hidden text-center p-12 order-1 md:order-2">
+      {/* --- COLUNA DIREITA: VISUAL RICO (O Preenchimento) --- */}
+      <div className="hidden lg:flex flex-col items-center justify-center relative bg-zinc-900 overflow-hidden order-2 border-l border-zinc-800">
         
-        {/* Efeitos de Fundo Diferentes do Login (Tons de Rosa/Laranja) */}
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-        
-        {/* Blobs de cor para dar o efeito gradiente neon */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-orange-600/20 rounded-full blur-[100px]"></div>
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-pink-600/20 rounded-full blur-[100px]"></div>
+        {/* 1. Background Noise & Gradient */}
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light"></div>
+        <div className="absolute top-[-20%] right-[-20%] w-[600px] h-[600px] bg-violet-600/20 rounded-full blur-[120px]"></div>
+        <div className="absolute bottom-[-20%] left-[-20%] w-[600px] h-[600px] bg-orange-600/20 rounded-full blur-[120px]"></div>
 
-        {/* Conteúdo da Marca */}
-        <div className="relative z-10 max-w-md space-y-6">
-          <h1 className="text-5xl font-bold text-white tracking-tight">
-            Junte-se ao <br />
-            <span className="text-transparent bg-clip-text bg-linear-to-r from-pink-500 to-orange-400">DevFlow</span>
-          </h1>
+        {/* 2. O CONTEÚDO CENTRAL (Preenchendo o Vazio) */}
+        <div className="relative z-10 w-full max-w-lg px-8 flex flex-col gap-8">
           
-          <h2 className="text-2xl font-medium text-zinc-200">
-            Gerencie seus projetos com facilidade.
-          </h2>
-          
-          <p className="text-zinc-400 text-lg max-w-xs mx-auto">
-            Conecte-se com outros devs, colabore em código e evolua sua carreira.
-          </p>
+          {/* Texto de Impacto */}
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-medium mb-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
+              </span>
+              Comunidade Ativa
+            </div>
+            <h1 className="text-4xl font-bold text-white leading-tight">
+              Evolua seu código com <br/>
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-violet-400 to-orange-400">Feedback Real</span>
+            </h1>
+          </div>
+
+          {/* 3. O "CARD DE CÓDIGO" FLUTUANTE (O Visual Hero) */}
+          <div className="relative group">
+            {/* Efeito de brilho atrás do card */}
+            <div className="absolute -inset-1 bg-linear-to-r from-violet-600 to-orange-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+            
+            {/* O Card em si (Simulando um editor de código) */}
+            <div className="relative bg-zinc-900 ring-1 ring-zinc-700 rounded-xl shadow-2xl overflow-hidden transform rotate-2 hover:rotate-0 transition-all duration-500 ease-out">
+              
+              {/* Barra de título do editor */}
+              <div className="flex items-center px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
+                <div className="flex space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
+                <div className="ml-4 text-xs text-zinc-500 font-mono">DevFlow.tsx</div>
+              </div>
+
+              {/* Conteúdo do Código (Syntax Highlight Fake) */}
+              <div className="p-6 font-mono text-sm text-zinc-300 space-y-2 leading-relaxed bg-zinc-950/80">
+                <div className="flex">
+                  <span className="text-zinc-600 w-6 select-none">1</span>
+                  <span><span className="text-violet-400">interface</span> <span className="text-yellow-300">Developer</span> {'{'}</span>
+                </div>
+                <div className="flex">
+                  <span className="text-zinc-600 w-6 select-none">2</span>
+                  <span className="pl-4">skills: <span className="text-orange-400">['React', 'Node', 'DevOps']</span>;</span>
+                </div>
+                <div className="flex">
+                  <span className="text-zinc-600 w-6 select-none">3</span>
+                  <span className="pl-4">level: <span className="text-green-400">'Senior'</span>;</span>
+                </div>
+                <div className="flex">
+                  <span className="text-zinc-600 w-6 select-none">4</span>
+                  <span>{'}'}</span>
+                </div>
+                <div className="flex mt-2">
+                  <span className="text-zinc-600 w-6 select-none">5</span>
+                  <span className="text-zinc-500">// Junte-se a 10.000+ devs</span>
+                </div>
+                <div className="flex">
+                  <span className="text-zinc-600 w-6 select-none">6</span>
+                  <span><span className="text-violet-400">const</span> community = <span className="text-blue-400">await</span> DevFlow.<span className="text-yellow-300">join</span>();</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Elemento Flutuante Extra (Tag) */}
+            <div className="absolute -bottom-6 -right-6 bg-zinc-800 border border-zinc-700 p-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce [animation-duration:3s]">
+              <div className="bg-green-500/20 p-1.5 rounded-md">
+                 <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+              </div>
+              <div className="text-xs">
+                <div className="text-zinc-400">Status</div>
+                <div className="font-bold text-white">Approved</div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
