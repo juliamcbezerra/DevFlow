@@ -12,13 +12,21 @@ export class FeedService {
     }: {
         userId: string;
         limit?: number;
-        cursor?: string;
+        cursor?: string | null;
     }) {
         const params: any[] = [userId, limit];
 
-        const cursorFilter = cursor ? `AND p."createdAt" < (SELECT "createdAt" FROM "Post" WHERE id = $3)`: ``;
-
-        if (cursor) params.push(cursor);
+        let cursorSQL = "";
+        if (cursor) {
+            cursorSQL = `
+                AND p."createdAt" < (
+                    SELECT "createdAt"
+                    FROM "Post"
+                    WHERE id = $3
+                )
+            `;
+            params.push(cursor);
+        }
 
         const result = await this.prisma.$queryRawUnsafe<any[]>(`
             SELECT
@@ -45,19 +53,20 @@ export class FeedService {
             JOIN "User" u ON u.id = p."authorId"
 
             WHERE
-                pr."ownerId" = $1
-                OR EXISTS (
-                    SELECT 1
-                    FROM "FollowProject" fp
-                    WHERE fp."projectId" = pr.id
-                    AND fp."userId" = $1
+                (
+                    pr."ownerId" = $1
+                    OR EXISTS (
+                        SELECT 1
+                        FROM "FollowProject" fp
+                        WHERE fp."projectId" = pr.id
+                        AND fp."userId" = $1
+                    )
                 )
-
-            ${cursor ? `AND p.id < '${cursor}'` : ''}
+                ${cursorSQL}
 
             ORDER BY p."createdAt" DESC
-            LIMIT ${limit};
-        `, userId);
+            LIMIT $2;
+        `, ...params);
 
         return {
             items: result,

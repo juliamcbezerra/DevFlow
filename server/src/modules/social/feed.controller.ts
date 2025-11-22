@@ -1,6 +1,7 @@
 import { Controller, Get, UseGuards, Req, Query } from '@nestjs/common';
 import { JwtGuard } from 'src/modules/jwt/jwt.guard';
 import { FeedService } from './feed.service';
+import { GetFeedDto } from './dto/get-feed.dto';
 
 @Controller('feed')
 export class FeedControler {
@@ -9,17 +10,11 @@ export class FeedControler {
     // Retorna o feed de posts dos projetos seguidos pelo usuário
     @UseGuards(JwtGuard)
     @Get()
-    async getFeed(
-        @Req() req, 
-        @Query('limit') limit?: number, 
-        @Query('cursor') cursor?: string 
-    ) {
-        const userId = req.user.sub;
-
+    async getFeed(@Query() query: GetFeedDto, @Req() req) {
         return this.feedService.getFeed({
-            userId,
-            limit: limit ? Number(limit) : 20,
-            cursor,
+            userId: req.user.userId,
+            cursor: query.cursor || null,
+            limit: query.limit ? Number(query.limit) : 20,
         });
     }
 }
