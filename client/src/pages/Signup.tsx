@@ -16,7 +16,7 @@ export default function SignupPage() {
       setError('');
       setLoading(true);
 
-      await api.post('/users', {
+      await api.post('/auth/signup', {
         name: dados.nome + ' ' + dados.sobrenome,
         email: dados.email,
         password: dados.password,
