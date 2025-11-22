@@ -1,12 +1,9 @@
 import { ReactNode } from 'react';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
+import { Outlet } from 'react-router-dom';
 
-interface AppShellProps {
-  children: ReactNode;
-}
-
-export function AppShell({ children }: AppShellProps) {
+export function AppShell() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
       <Navbar />
@@ -23,7 +20,8 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* Coluna do Meio (Feed) - Ocupa 6 colunas (metade da tela) */}
         <main className="col-span-1 md:col-span-9 lg:col-span-6 px-4 py-6">
-          {children}
+          {/* O Outlet é onde o Feed vai aparecer magicamente */}
+          <Outlet /> 
         </main>
 
         {/* Coluna da Direita (Trending) - Ocupa 3 colunas */}
