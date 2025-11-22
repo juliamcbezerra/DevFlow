@@ -1,6 +1,6 @@
-import { ReactNode } from 'react';
-import { Navbar } from './Navbar';
-import { Sidebar } from './Sidebar';
+import { ReactNode } from "react";
+import { Navbar } from "./Navbar";
+import { Sidebar } from "./Sidebar";
 
 interface AppShellProps {
   children: ReactNode;
@@ -8,37 +8,29 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <Navbar />
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 relative overflow-x-hidden">
       
-      <div className="max-w-7xl mx-auto pt-16 grid grid-cols-1 md:grid-cols-12 gap-6">
-        
-        {/* Coluna da Esquerda (Menu) - Ocupa 3 colunas */}
-        <div className="hidden md:block md:col-span-3">
-            {/* O Sidebar já tem position fixed, aqui é só um espaço reservado se necessário, 
-                ou removemos o fixed do Sidebar e deixamos o grid controlar. 
-                Para simplificar estilo Reddit, vamos deixar o Sidebar controlar seu visual */}
-             <Sidebar />
-        </div>
+      {/* Fundo */}
+      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15] mix-blend-soft-light pointer-events-none fixed z-0"></div>
+      <div className="fixed top-[-10%] left-[-10%] w-[800px] h-[800px] bg-violet-800/15 rounded-full blur-[150px] pointer-events-none z-0"></div>
+      <div className="fixed bottom-[-10%] right-[-10%] w-[800px] h-[800px] bg-blue-800/15 rounded-full blur-[150px] pointer-events-none z-0"></div>
 
-        {/* Coluna do Meio (Feed) - Ocupa 6 colunas (metade da tela) */}
-        <main className="col-span-1 md:col-span-9 lg:col-span-6 px-4 py-6">
-          {children}
-        </main>
+      <div className="relative z-10">
+        <Navbar />
 
-        {/* Coluna da Direita (Trending) - Ocupa 3 colunas */}
-        <div className="hidden lg:block lg:col-span-3 py-6">
-          <div className="sticky top-24 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <h2 className="font-bold text-zinc-200 mb-4">Trending Tags</h2>
-            <div className="flex flex-wrap gap-2">
-              <span className="px-3 py-1 bg-zinc-800 text-xs rounded-full text-zinc-300 hover:text-white cursor-pointer">#javascript</span>
-              <span className="px-3 py-1 bg-zinc-800 text-xs rounded-full text-zinc-300 hover:text-white cursor-pointer">#rust</span>
-              <span className="px-3 py-1 bg-zinc-800 text-xs rounded-full text-zinc-300 hover:text-white cursor-pointer">#devflow</span>
+        <div className="flex pt-16">
+          <Sidebar />
+
+          <main className="flex-1 lg:ml-64 min-h-[calc(100vh-4rem)] flex justify-center">
+            
+            <div className="w-full max-w-[1100px] mx-auto p-4 sm:p-6">
+              {children}
             </div>
-          </div>
+            
+          </main>
         </div>
-
       </div>
+      
     </div>
   );
 }
