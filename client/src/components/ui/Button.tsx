@@ -1,82 +1,43 @@
-﻿import React from 'react'
+﻿import React from "react";
 
-type BotaoProps = {
-  label: string
-  onClick?: () => void
-  variant?: 'primario' | 'secundario'
-  type?: 'button' | 'submit' | 'reset'
-  disabled?: boolean
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  isLoading?: boolean;
+  variant?: "primary" | "outline";
 }
 
-const Botao = ({ label, onClick, variant = 'primario', type = 'button', disabled = false }: BotaoProps) => {
-  // estilo base do botao
-  const estiloBase: React.CSSProperties = {
-    padding: '12px 16px',
-    borderRadius: '6px',
-    fontWeight: 500,
-    transition: 'all 0.2s ease-in-out',
-    outline: 'none',
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-  }
+export function Button({ 
+  children, 
+  className = "", 
+  isLoading = false, 
+  variant = "primary", 
+  disabled,
+  ...props 
+}: ButtonProps) {
 
-  // estilos principais dos dois tipos de botoes
-  const variantes: Record<'primario' | 'secundario', React.CSSProperties> = {
-    primario: {
-      backgroundColor: '#8A3FFC',
-      color: 'white',
-      border: 'none',
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-    },
-    secundario: {
-      backgroundColor: 'white',
-      color: '#8A3FFC',
-      border: '2px solid #8A3FFC33',
-    },
-  }
-
-  // estilos aplicados quando o mouse passa por cima
-  const estilosHover: Record<'primario' | 'secundario', React.CSSProperties> = {
-    primario: { backgroundColor: '#7A2DE5', transform: 'scale(1.02)' },
-    secundario: { backgroundColor: '#E9E9E9', transform: 'scale(1.02)' },
-  }
-
-  // estilos aplicados quando o botao e clicado
-  const estilosAtivo: Record<'primario' | 'secundario', React.CSSProperties> = {
-    primario: { backgroundColor: '#692BCC', transform: 'scale(0.98)' },
-    secundario: { backgroundColor: '#DDDDDD', transform: 'scale(0.98)' },
-  }
-
-  // controle dos estados de hover e clique
-  const [hover, setHover] = React.useState(false)
-  const [ativo, setAtivo] = React.useState(false)
-
-  // combina os estilos: base + variante + hover + ativo + disabled
-  const estiloFinal = {
-    ...estiloBase,
-    ...variantes[variant],
-    ...(hover && !disabled ? estilosHover[variant] : {}),
-    ...(ativo && !disabled ? estilosAtivo[variant] : {}),
-    ...(disabled ? { opacity: 0.5, cursor: 'not-allowed' } : {}),
-  }
+  const baseStyles = "w-full flex items-center justify-center px-4 py-3 rounded-md font-bold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-950 disabled:opacity-50 disabled:cursor-not-allowed";
+  
+  const variants = {
+    primary: "bg-violet-600 hover:bg-violet-700 text-white focus:ring-violet-600",
+    outline: "border border-zinc-700 text-zinc-300 hover:bg-zinc-800 focus:ring-zinc-500",
+  };
 
   return (
-    <button
-      type={type}
-      onClick={onClick}
-      disabled={disabled}
-      style={estiloFinal}
-      onMouseEnter={() => !disabled && setHover(true)}
-      onMouseLeave={() => {
-        setHover(false)
-        setAtivo(false)
-      }}
-      onMouseDown={() => !disabled && setAtivo(true)}
-      onMouseUp={() => !disabled && setAtivo(false)}
+    <button 
+      className={`${baseStyles} ${variants[variant]} ${className}`}
+      disabled={isLoading || disabled}
+      {...props}
     >
-      {label}
+      {isLoading ? (
+        <div className="flex items-center gap-2">
+          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>Carregando...</span>
+        </div>
+      ) : (
+        children 
+      )}
     </button>
-  )
+  );
 }
-
-export default Botao

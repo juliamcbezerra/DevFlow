@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import api from '../services/api';
 
-// Tipagem do Utilizador (ajuste conforme o teu DTO do backend)
 interface User {
   id: string;
   email: string;
@@ -11,8 +10,8 @@ interface User {
 interface AuthContextData {
   user: User | null;
   isAuthenticated: boolean;
-  signIn: (data: any) => Promise<void>; // O "data" virá do formulário de Login
-  signUp: (data: any) => Promise<void>; // O "data" virá do formulário de Signup
+  signIn: (data: any) => Promise<void>; 
+  signUp: (data: any) => Promise<void>; 
   signOut: () => void;
   loading: boolean;
 }
@@ -23,10 +22,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Ao carregar a app, podemos tentar recuperar o user (se houver persistência)
-  // Nota: Como usamos Cookies HttpOnly, não podemos "ler" o token.
-  // Idealmente, teríamos um endpoint GET /auth/me para validar a sessão no load.
-  // Para o Sprint 1, vamos confiar no Login explícito.
   useEffect(() => {
     const storedUser = localStorage.getItem('@DevFlow:user');
     if (storedUser) {
@@ -36,20 +31,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function signIn(credentials: any) {
-    const response = await api.post('/auth/signin', credentials);
+    const response = await api.post('/auth/signin', {
+      email: credentials.email,    
+      password: credentials.password 
+    });
     
-    // O Backend define o Cookie automaticamente.
-    // Nós guardamos apenas os dados não sensíveis do user para a UI.
-    const userData = response.data; // O backend deve retornar o objeto user
-
+    const userData = response.data; 
     setUser(userData);
     localStorage.setItem('@DevFlow:user', JSON.stringify(userData));
   }
 
   async function signUp(credentials: any) {
-    // Chama o endpoint de registo
     await api.post('/auth/signup', credentials);
-    // Depois do cadastro, podemos fazer login automático ou redirecionar
   }
 
   function signOut() {

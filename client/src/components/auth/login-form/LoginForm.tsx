@@ -1,180 +1,111 @@
-import React from "react"
-import Input from "../../ui/Input"
-import Botao from "../../ui/Button"
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { Input } from "../../ui/Input"; 
+import { Button } from "../../ui/Button"; 
 
-// interface com os dados do formulario de login
-interface FormDataLogin {
-  email: string
-  senha: string
-  lembrarMe: boolean
+export interface FormDataLogin {
+  email: string;
+  password: string;
+  lembrarMe: boolean;
 }
 
-// interface das propriedades do componente
 interface LoginFormProps {
-  // callback chamado quando o formulario é submetido
-  onSubmit?: (dados: FormDataLogin) => Promise<void> | void
-  // estado de carregamento durante o envio
-  carregando?: boolean
-  // mensagem de erro 
-  erro?: string
+  onSubmit: (dados: FormDataLogin) => Promise<void> | void;
+  isLoading?: boolean;
+  error?: string;
 }
 
-export function LoginForm({ onSubmit, carregando = false, erro }: LoginFormProps) {
-  // estado do formulario
-  const [formData, setFormData] = React.useState<FormDataLogin>({
+export function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps) {
+  const [formData, setFormData] = useState<FormDataLogin>({
     email: "",
-    senha: "",
+    password: "",
     lembrarMe: false,
-  })
+  });
 
-  // estado pra erros de validacao por campo
-  const [errosCampo, setErrosCampo] = React.useState<Record<string, string>>({})
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // funcao pra atualizar um campo do formulario
-  const atualizaCampo = (campo: keyof FormDataLogin, valor: string | boolean) => {
-    setFormData((prev) => ({
-      ...prev,
-      [campo]: valor,
-    }))
-    // limpa erro do campo quando usuario começa a digitar
-    if (errosCampo[campo]) {
-      setErrosCampo((prev) => ({
-        ...prev,
-        [campo]: "",
-      }))
-    }
-  }
+  const updateField = (field: keyof FormDataLogin, value: string | boolean) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (fieldErrors[field]) setFieldErrors((prev) => ({ ...prev, [field]: "" }));
+  };
 
-  // funcao pra validar formulario antes de enviar
-  const validaFormulario = (): boolean => {
-    const novosErros: Record<string, string> = {}
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.email.trim()) newErrors.email = "O email é obrigatório";
+    if (!formData.password) newErrors.password = "A senha é obrigatória";
+    // Removida a trava de 8 chars no login para não bloquear usuários antigos
+    setFieldErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-    if (!formData.email.trim()) {
-      novosErros.email = "email obrigatorio"
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      novosErros.email = "email invalido"
-    }
-    if (!formData.senha) {
-      novosErros.senha = "senha obrigatoria"
-    } else if (formData.senha.length < 8) {
-      novosErros.senha = "senha deve ter pelo menos 8 caracteres"
-    }
-
-    setErrosCampo(novosErros)
-    return Object.keys(novosErros).length === 0
-  }
-
-  // funcao pra lidar com envio do formulario
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-
-    if (!validaFormulario()) {
-      return
-    }
-
-    try {
-      if (onSubmit) {
-        await onSubmit(formData)
-      }
-    } catch (err) {
-      console.error("erro ao fazer login:", err)
-    }
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+    if (onSubmit) await onSubmit(formData);
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/*titulo e subtitulo*/}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', letterSpacing: '-0.02em', color: 'white', margin: 0 }}>Bem-vindo de volta</h1>
-        <p style={{ fontSize: '0.875rem', color: '#9ca3af', margin: 0 }}>
-          Não tem uma conta?{" "}
-          <a href="/signup" style={{ fontWeight: '500', color: '#a78bfa', textDecoration: 'none' }} onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}>
-            Cadastre-se
-          </a>
-        </p>
-      </div>
-
-      {/*mensagem de erro geral*/}
-      {erro && (
-        <div style={{ borderRadius: '6px', backgroundColor: 'rgba(220, 38, 38, 0.1)', padding: '12px', fontSize: '0.875rem', color: '#fca5a5', border: '1px solid rgba(220, 38, 38, 0.3)' }}>
-          {erro}
+    <div className="flex flex-col gap-6 w-full">
+      {/* Mensagem de Erro vinda do Backend */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-md text-center">
+          {error}
         </div>
       )}
 
-      {/*formulario*/}
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {/*email*/}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label htmlFor="email" style={{ fontSize: '0.875rem', fontWeight: '500', color: 'white' }}>
-            Email
-          </label>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="space-y-1">
           <Input
+            label="Email"
             type="email"
-            placeholder="seu.email@exemplo.com"
+            placeholder="seu@email.com"
             value={formData.email}
-            onChange={(e) => atualizaCampo("email", e.target.value)}
+            onChange={(e) => updateField("email", e.target.value)}
+            disabled={isLoading}
+            className={fieldErrors.email ? "border-red-500 focus:border-red-500" : ""}
           />
-          {errosCampo.email && (
-            <p style={{ fontSize: '0.75rem', color: '#fca5a5', margin: 0 }}>{errosCampo.email}</p>
-          )}
+          {fieldErrors.email && <span className="text-xs text-red-400">{fieldErrors.email}</span>}
         </div>
 
-        {/*senha*/}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label htmlFor="senha" style={{ fontSize: '0.875rem', fontWeight: '500', color: 'white' }}>
-            Senha
-          </label>
+        <div className="space-y-1">
           <Input
+            label="Senha"
             type="password"
             placeholder="••••••••"
-            value={formData.senha}
-            onChange={(e) => atualizaCampo("senha", e.target.value)}
+            value={formData.password}
+            onChange={(e) => updateField("password", e.target.value)}
+            disabled={isLoading}
+            className={fieldErrors.password ? "border-red-500 focus:border-red-500" : ""}
           />
-          {errosCampo.senha && (
-            <p style={{ fontSize: '0.75rem', color: '#fca5a5', margin: 0 }}>{errosCampo.senha}</p>
-          )}
+          {fieldErrors.password && <span className="text-xs text-red-400">{fieldErrors.password}</span>}
         </div>
 
-        {/*lembre-se de mim e esqueci a senha*/}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="flex items-center justify-between mt-2">
+          <label className="flex items-center gap-2 cursor-pointer group">
             <input
-              id="lembrarMe"
               type="checkbox"
               checked={formData.lembrarMe}
-              onChange={(e) => atualizaCampo("lembrarMe", e.target.checked)}
-              style={{
-                width: '16px',
-                height: '16px',
-                borderRadius: '4px',
-                border: '2px solid #a78bfa',
-                backgroundColor: formData.lembrarMe ? '#a78bfa' : 'transparent',
-                cursor: carregando ? 'not-allowed' : 'pointer',
-                opacity: carregando ? 0.5 : 1,
-                accentColor: '#a78bfa'
-              }}
-              disabled={carregando}
+              onChange={(e) => updateField("lembrarMe", e.target.checked)}
+              disabled={isLoading}
+              className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-violet-600 focus:ring-violet-600 accent-violet-600"
             />
-            <label htmlFor="lembrarMe" style={{ fontSize: '0.875rem', fontWeight: '500', cursor: carregando ? 'not-allowed' : 'pointer', opacity: carregando ? 0.5 : 1, color: 'white' }}>
+            <span className="text-sm text-zinc-400 group-hover:text-zinc-300 transition-colors">
               Lembre-se de mim
-            </label>
-          </div>
-          <a href="#" style={{ fontSize: '0.875rem', color: '#a78bfa', textDecoration: 'none', fontWeight: '500' }} onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}>
+            </span>
+          </label>
+          
+          <Link to="#" className="text-sm font-medium text-violet-500 hover:text-violet-400">
             Esqueceu a senha?
-          </a>
+          </Link>
         </div>
 
-        {/*botao enviar*/}
-        <div style={{ width: '100%', marginTop: '8px' }}>
-          <Botao 
-            label={carregando ? "Entrando..." : "Entrar"} 
-            type="submit"
-            disabled={carregando}
-            variant="primario"
-            onClick={() => {}}
-          />
+        {/* AQUI ESTAVA O PROBLEMA: Agora usamos children */}
+        <div className="mt-4">
+          <Button type="submit" isLoading={isLoading}>
+            Entrar
+          </Button>
         </div>
       </form>
     </div>
-  )
+  );
 }

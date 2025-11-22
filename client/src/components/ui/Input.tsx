@@ -1,63 +1,38 @@
-import React from 'react'
+import React from "react";
 
-type InputProps = {
-  placeholder?: string
-  value?: string
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
-  type?: 'text' | 'email' | 'password' | 'number' | 'tel'
+// 1. Estendemos as props padrão do HTML (aceita type, placeholder, onChange, disabled, etc.)
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string; // Opcional: se passar label, ele renderiza o texto em cima
 }
 
-const Input = ({ placeholder, value, onChange, type = 'text' }: InputProps) => {
-  // estados de hover e foco
-  const [hover, setHover] = React.useState(false)
-  const [focado, setFocado] = React.useState(false)
-
-  // estilo base do input
-  const estiloBase: React.CSSProperties = {
-    width: '100%',                     // responsivo
-    padding: '12px 14px',
-    borderRadius: '6px',
-    border: '1px solid #404854',
-    backgroundColor: '#2d2d44',
-    outline: 'none',
-    fontSize: '16px',
-    transition: 'all 0.15s ease-in-out',
-    fontFamily: 'inherit',
-    color: '#ffffff',
-    boxSizing: 'border-box',           // responsivo: impede que padding aumente largura
-  }
-
-  // estilo quando o mouse passa por cima
-  const estiloHover: React.CSSProperties = {
-    borderColor: '#a78bfa',
-  }
-
-  // estilo quando o input esta focado
-  const estiloFocado: React.CSSProperties = {
-    borderColor: '#8A3FFC',
-    boxShadow: '0 0 0 2px rgba(138, 63, 252, 0.25)',
-  }
-
-  // combinacao de estilos dinamicos
-  const estiloFinal = {
-    ...estiloBase,
-    ...(hover ? estiloHover : {}),
-    ...(focado ? estiloFocado : {}),
-  }
-
+// 2. Exportação Nomeada (export function) para casar com o import do LoginForm
+export function Input({ label, className = "", ...props }: InputProps) {
   return (
-    <input
-      type={type}
-      placeholder={placeholder}
-      value={value}                    
-      onChange={onChange}              
-      style={estiloFinal}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      onFocus={() => setFocado(true)}
-      onBlur={() => setFocado(false)}
-    />
-  )
+    <div className="flex flex-col gap-2 w-full">
+      {label && (
+        <label className="text-sm font-medium text-zinc-300">
+          {label}
+        </label>
+      )}
+      
+      <input
+        className={`
+          w-full px-4 py-3 rounded-md
+          bg-zinc-800 border border-zinc-700 text-zinc-100 
+          placeholder-zinc-500 
+          outline-none transition-all duration-200
+          
+          /* Estados de Foco (o "Neon" do nosso tema) */
+          focus:border-violet-600 focus:ring-1 focus:ring-violet-600
+          
+          /* Estado Desabilitado */
+          disabled:opacity-50 disabled:cursor-not-allowed
+          
+          /* Permite passar classes extras via props */
+          ${className} 
+        `}
+        {...props} // Repassa todas as props (onChange, value, type, id, etc.)
+      />
+    </div>
+  );
 }
-
-export default Input
