@@ -1,5 +1,5 @@
 import { AppShell } from "../components/layout/AppShell";
-import { Sidebar } from "../components/layout/Sidebar"; // Importando a Sidebar aqui para layout de 3 colunas
+import { Sidebar } from "../components/layout/Sidebar";
 import { useAuth } from "../context/AuthContext";
 
 const glassCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden hover:border-zinc-700/80 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-violet-900/5";
@@ -8,27 +8,23 @@ export default function FeedPage() {
   const { user } = useAuth();
 
   const fakePosts = [
-    { id: 1, author: "Diego Fernandes", role: "CTO @ Rocketseat", time: "2h", content: "Acabei de migrar um projeto gigante de Create React App para Vite. A performance é absurda! 🚀", tags: ["react", "vite", "dx"], likes: 42, comments: 12 },
+    { id: 1, author: "Diego Fernandes", role: "CTO @ Rocketseat", time: "2h", content: "Acabei de migrar um projeto gigante de Create React App para Vite. A performance é absurda! 🚀 #react #vite #dx", tags: ["react", "vite", "dx"], likes: 42, comments: 12 },
     { id: 2, author: "Mayk Brito", role: "Educator", time: "5h", content: "Dica de CSS: usem gap no Flexbox.", code: ".box { display: flex; gap: 16px; }", tags: ["css"], likes: 128, comments: 34 },
-    { id: 3, author: "Dev Test", role: "Admin", time: "1d", content: "Mais um post para testar o scroll do feed enquanto a sidebar fica fixa...", likes: 10, comments: 2 },
-    { id: 4, author: "User", role: "Member", time: "2d", content: "Rolando a tela...", likes: 5, comments: 0 },
+    { id: 3, author: "Dev Test", role: "Admin", time: "1d", content: "Testando o scroll da janela com sidebars sticky!", likes: 10, comments: 2 },
+    { id: 4, author: "User", role: "Member", time: "2d", content: "Mais conteúdo...", likes: 5, comments: 0 },
+    { id: 5, author: "User 2", role: "Member", time: "3d", content: "Mais conteúdo...", likes: 15, comments: 3 },
+    { id: 6, author: "User 3", role: "Member", time: "4d", content: "Mais conteúdo para garantir o scroll...", likes: 8, comments: 1 },
   ];
   
   const trendingTags = ["javascript", "reactjs", "nodejs", "career", "opensource"];
 
   return (
     <AppShell>
-      {/* CONTAINER DAS 3 COLUNAS */}
-      {/* justify-center: Centraliza o bloco todo na tela */}
-      <div className="w-full max-w-[1100px] mx-auto flex gap-8 items-start justify-center">
-        
-        {/* 1. SIDEBAR ESQUERDA */}
+        {/* 1. SIDEBAR ESQUERDA (Chamada no fluxo normal) */}
         <Sidebar />
 
-        {/* 2. FEED CENTRAL */}
-        {/* min-w-0: Evita overflow */}
-        {/* max-w-[600px]: Mantém o tamanho elegante que você gostou */}
-        <div className="flex-1 min-w-0 max-w-[600px] space-y-6 pb-20">
+        {/* 2. FEED CENTRAL (Livre para crescer) */}
+        <div className="flex-1 min-w-0 space-y-6">
           
           {/* Criar Post */}
           <div className={glassCardClass + " p-4"}>
@@ -56,11 +52,11 @@ export default function FeedPage() {
             <article key={post.id} className={glassCardClass}>
               <div className="p-6">
                 <div className="flex items-center gap-3 mb-4">
-                   <img src={`https://ui-avatars.com/api/?name=${post.author}&background=random`} alt={post.author} className="w-10 h-10 rounded-full ring-2 ring-zinc-800/50 group-hover:ring-violet-500/20 transition-all" />
-                   <div>
-                     <h3 className="text-sm font-bold text-zinc-100 hover:text-violet-400 cursor-pointer transition-colors">{post.author}</h3>
-                     <p className="text-xs text-zinc-400">{post.role} • {post.time}</p>
-                   </div>
+                  <img src={`https://ui-avatars.com/api/?name=${post.author}&background=random`} alt={post.author} className="w-10 h-10 rounded-full ring-2 ring-zinc-800/50 group-hover:ring-violet-500/20 transition-all" />
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-100 hover:text-violet-400 cursor-pointer transition-colors">{post.author}</h3>
+                    <p className="text-xs text-zinc-400">{post.role} • {post.time}</p>
+                  </div>
                 </div>
                 <p className="text-zinc-200 mb-4 leading-relaxed">{post.content}</p>
                 {post.code && <div className="bg-zinc-950/80 p-4 rounded-xl font-mono text-sm text-zinc-300 mb-4 border border-zinc-800/80 custom-scrollbar overflow-x-auto"><pre>{post.code}</pre></div>}
@@ -81,54 +77,51 @@ export default function FeedPage() {
           ))}
         </div>
 
-        {/* 3. DIREITA: WIDGETS (Fixa) */}
-        {/* sticky top-20: Gruda na tela também! */}
-        <aside className="hidden lg:block w-[320px] shrink-0 sticky top-20 h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar">
-            <div className="space-y-6">
-                
-                {/* Trending */}
-                <div className={glassCardClass + " p-5"}>
-                  <h3 className="font-bold text-white mb-4 text-lg flex items-center gap-2">
-                    <span className="text-orange-500">🔥</span> Trending Topics
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {trendingTags.map(tag => (
-                      <span key={tag} className="px-3 py-1.5 bg-zinc-800/40 hover:bg-zinc-800/80 border border-zinc-700/40 rounded-full text-xs text-zinc-300 hover:text-white cursor-pointer transition-colors backdrop-blur-sm">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Who to Follow */}
-                <div className={glassCardClass + " p-5"}>
-                  <h3 className="font-bold text-zinc-500 mb-4 text-sm uppercase tracking-wider">Para seguir</h3>
-                  <div className="space-y-4">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="flex items-center justify-between group">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-9 h-9 rounded-lg bg-linear-to-br ${i===1 ? 'from-blue-500 to-cyan-500' : i===2 ? 'from-purple-500 to-pink-500' : 'from-orange-500 to-red-500'} flex items-center justify-center shadow-lg`}>
-                              <span className="text-white font-bold text-xs">{i===1 ? 'R' : i===2 ? 'B' : 'D'}</span>
-                          </div>
-                          <div className="text-sm">
-                            <p className="font-bold text-zinc-200 group-hover:text-white transition-colors">{i===1 ? 'Rocketseat' : i===2 ? 'Backend Br' : 'DevOps'}</p>
-                            <p className="text-xs text-zinc-500">Education</p>
-                          </div>
-                        </div>
-                        <button className="text-violet-400 text-xs font-bold hover:bg-violet-500/10 px-3 py-1 rounded-full transition-colors">Seguir</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="text-xs text-zinc-600 px-2 text-center leading-relaxed">
-                  © 2025 DevFlow Inc.
-                </div>
-
+        {/* 3. DIREITA: WIDGETS (Sticky) */}
+        {/* sticky top-24: Também acompanha o scroll! */}
+        <aside className="hidden lg:block w-[320px] shrink-0 sticky top-24 h-fit space-y-6">
+            
+            {/* Trending */}
+            <div className={glassCardClass + " p-5"}>
+              <h3 className="font-bold text-white mb-4 text-lg flex items-center gap-2">
+                <span className="text-orange-500">🔥</span> Trending Topics
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {trendingTags.map(tag => (
+                  <span key={tag} className="px-3 py-1.5 bg-zinc-800/40 hover:bg-zinc-800/80 border border-zinc-700/40 rounded-full text-xs text-zinc-300 hover:text-white cursor-pointer transition-colors backdrop-blur-sm">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
             </div>
+
+            {/* Who to Follow */}
+            <div className={glassCardClass + " p-5"}>
+              <h3 className="font-bold text-zinc-500 mb-4 text-sm uppercase tracking-wider">Para seguir</h3>
+              <div className="space-y-4">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="flex items-center justify-between group">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-lg bg-linear-to-br ${i===1 ? 'from-blue-500 to-cyan-500' : i===2 ? 'from-purple-500 to-pink-500' : 'from-orange-500 to-red-500'} flex items-center justify-center shadow-lg`}>
+                          <span className="text-white font-bold text-xs">{i===1 ? 'R' : i===2 ? 'B' : 'D'}</span>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-bold text-zinc-200 group-hover:text-white transition-colors">{i===1 ? 'Rocketseat' : i===2 ? 'Backend Br' : 'DevOps'}</p>
+                        <p className="text-xs text-zinc-500">Education</p>
+                      </div>
+                    </div>
+                    <button className="text-violet-400 text-xs font-bold hover:bg-violet-500/10 px-3 py-1 rounded-full transition-colors">Seguir</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="text-xs text-zinc-600 px-2 text-center leading-relaxed">
+               © 2025 DevFlow Inc.
+            </div>
+
         </aside>
 
-      </div>
     </AppShell>
   );
 }

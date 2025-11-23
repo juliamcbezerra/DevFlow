@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import { Navbar } from "./Navbar";
-// REMOVIDO: import { Sidebar } ...
 
 interface AppShellProps {
   children: ReactNode;
@@ -8,24 +7,23 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 relative overflow-x-hidden">
+    // min-h-screen: Permite que a página cresça infinitamente
+    // Removi 'overflow-hidden' para liberar o scroll do navegador
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 relative">
       
-      {/* Fundo */}
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15] mix-blend-soft-light pointer-events-none fixed z-0"></div>
+      {/* Fundo Fixo (Para não se mexer enquanto você rola) */}
+      <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15] mix-blend-soft-light pointer-events-none z-0"></div>
       <div className="fixed top-[-10%] left-[-10%] w-[800px] h-[800px] bg-violet-800/15 rounded-full blur-[150px] pointer-events-none z-0"></div>
       <div className="fixed bottom-[-10%] right-[-10%] w-[800px] h-[800px] bg-blue-800/15 rounded-full blur-[150px] pointer-events-none z-0"></div>
 
-      <div className="relative z-10">
+      <div className="relative z-10 flex flex-col min-h-screen">
         <Navbar />
 
-        <div className="pt-16">
-          {/* AQUI ESTAVA O ERRO: Removi a <Sidebar /> que ficava aqui */}
-          
-          {/* O children agora ocupa a largura total e centraliza seu próprio conteúdo */}
-          <main className="min-h-[calc(100vh-4rem)] flex justify-center">
-            <div className="w-full p-4 sm:p-6 flex justify-center">
-              {children}
-            </div>
+        {/* Container Principal */}
+        <div className="flex justify-center w-full pt-20 pb-10">
+          {/* max-w-[1200px]: Limita a largura do conteúdo centralizado */}
+          <main className="w-full max-w-[1200px] px-4 flex gap-8 items-start">
+            {children}
           </main>
         </div>
       </div>
