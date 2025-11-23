@@ -2,34 +2,38 @@ import { AppShell } from "../components/layout/AppShell";
 import { Sidebar } from "../components/layout/Sidebar";
 import { useAuth } from "../context/AuthContext";
 
-const glassCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden hover:border-zinc-700/80 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-violet-900/5";
+// 1. ESTILO DOS POSTS (Com efeitos de hover, sombra e brilho)
+const postCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden hover:border-zinc-700/80 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-violet-900/5";
+
+// 2. ESTILO DA DIREITA (Estático - Sem sombra/brilho no hover para não bugar)
+const widgetCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden";
 
 export default function FeedPage() {
   const { user } = useAuth();
 
   const fakePosts = [
-    { id: 1, author: "Diego Fernandes", role: "CTO @ Rocketseat", time: "2h", content: "Acabei de migrar um projeto gigante de Create React App para Vite. A performance é absurda! 🚀 #react #vite #dx", tags: ["react", "vite", "dx"], likes: 42, comments: 12 },
+    { id: 1, author: "Diego Fernandes", role: "CTO @ Rocketseat", time: "2h", content: "Acabei de migrar um projeto gigante de Create React App para Vite. A performance é absurda! 🚀", tags: ["react", "vite", "dx"], likes: 42, comments: 12 },
     { id: 2, author: "Mayk Brito", role: "Educator", time: "5h", content: "Dica de CSS: usem gap no Flexbox.", code: ".box { display: flex; gap: 16px; }", tags: ["css"], likes: 128, comments: 34 },
-    { id: 3, author: "Dev Test", role: "Admin", time: "1d", content: "Testando o scroll da janela com sidebars sticky!", likes: 10, comments: 2 },
-    { id: 4, author: "User", role: "Member", time: "2d", content: "Mais conteúdo...", likes: 5, comments: 0 },
-    { id: 5, author: "User 2", role: "Member", time: "3d", content: "Mais conteúdo...", likes: 15, comments: 3 },
-    { id: 6, author: "User 3", role: "Member", time: "4d", content: "Mais conteúdo para garantir o scroll...", likes: 8, comments: 1 },
+    { id: 3, author: "Dev Test", role: "Admin", time: "1d", content: "Testando o scroll infinito com sidebars fixas...", likes: 10, comments: 2 },
+    { id: 4, author: "User", role: "Member", time: "2d", content: "Mais um post para encher a tela...", likes: 5, comments: 0 },
+    { id: 5, author: "User 2", role: "Member", time: "3d", content: "Scroll invisível ativado!", likes: 15, comments: 3 },
   ];
   
   const trendingTags = ["javascript", "reactjs", "nodejs", "career", "opensource"];
 
   return (
     <AppShell>
-        {/* 1. SIDEBAR ESQUERDA (Chamada no fluxo normal) */}
+        
+        {/* 1. SIDEBAR ESQUERDA */}
         <Sidebar />
 
-        {/* 2. FEED CENTRAL (Livre para crescer) */}
-        <div className="flex-1 min-w-0 space-y-6">
+        {/* 2. FEED CENTRAL */}
+        <div className="flex-1 min-w-0 space-y-6 pb-10">
           
           {/* Criar Post */}
-          <div className={glassCardClass + " p-4"}>
+          <div className={postCardClass + " p-4"}>
             <div className="flex gap-4">
-              <img src={`https://ui-avatars.com/api/?name=${user?.name || 'Eu'}&background=random`} alt="Avatar" className="w-10 h-10 rounded-full ring-2 ring-zinc-800/50" />
+              <img src={`https://ui-avatars.com/api/?name=${user?.name || 'Eu'}&background=random`} alt="Avatar" className="w-10 h-10 rounded-full ring-2 ring-zinc-800/50 shrink-0" />
               <div className="flex-1">
                 <input 
                   type="text" 
@@ -49,7 +53,7 @@ export default function FeedPage() {
 
           {/* Posts */}
           {fakePosts.map((post) => (
-            <article key={post.id} className={glassCardClass}>
+            <article key={post.id} className={postCardClass}>
               <div className="p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <img src={`https://ui-avatars.com/api/?name=${post.author}&background=random`} alt={post.author} className="w-10 h-10 rounded-full ring-2 ring-zinc-800/50 group-hover:ring-violet-500/20 transition-all" />
@@ -78,11 +82,10 @@ export default function FeedPage() {
         </div>
 
         {/* 3. DIREITA: WIDGETS (Sticky) */}
-        {/* sticky top-24: Também acompanha o scroll! */}
         <aside className="hidden lg:block w-[320px] shrink-0 sticky top-24 h-fit space-y-6">
             
             {/* Trending */}
-            <div className={glassCardClass + " p-5"}>
+            <div className={widgetCardClass + " p-5"}>
               <h3 className="font-bold text-white mb-4 text-lg flex items-center gap-2">
                 <span className="text-orange-500">🔥</span> Trending Topics
               </h3>
@@ -96,7 +99,7 @@ export default function FeedPage() {
             </div>
 
             {/* Who to Follow */}
-            <div className={glassCardClass + " p-5"}>
+            <div className={widgetCardClass + " p-5"}>
               <h3 className="font-bold text-zinc-500 mb-4 text-sm uppercase tracking-wider">Para seguir</h3>
               <div className="space-y-4">
                 {[1, 2, 3].map(i => (

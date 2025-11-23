@@ -17,8 +17,6 @@ export function Sidebar() {
   `;
 
   return (
-    // sticky top-24: A MÁGICA. Faz a sidebar acompanhar o scroll e travar no topo.
-    // max-h-[calc(100vh-7rem)]: Garante que ela caiba na tela se for muito alta.
     <aside className="hidden lg:flex flex-col w-64 sticky top-24 max-h-[calc(100vh-7rem)] shrink-0">
       
       {/* Card Visual */}
