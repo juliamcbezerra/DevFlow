@@ -5,6 +5,7 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { VoteDto } from './dto/vote.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { CommentTreeDTO } from './dto/comment-tree.dto';
 
 @Injectable()
 export class SocialService {
@@ -122,12 +123,53 @@ export class SocialService {
   async findCommentsByPost(postId: string) {
     return this.prisma.comment.findMany({
       where: { postId },
-      orderBy: { createdAt: 'asc' }, // Mais antigos primeiro (ordem cronológica)
+      orderBy: { createdAt: 'asc' },
       include: {
-        author: { select: { name: true, id: true } }
+        author: {
+          select: { id: true, name: true }
+        }
       }
     });
   }
+
+  private buildCommentTree(comments: any[]): CommentTreeDTO[] {
+    // Map com array de filhos por parentId
+    const childrenMap = new Map<string | null, any[]>();
+
+    for (const comment of comments) {
+      const parentId = comment.parentId ?? null;
+
+      if (!childrenMap.has(parentId)) {
+        childrenMap.set(parentId, []);
+      }
+
+      childrenMap.get(parentId)!.push(comment);
+    }
+
+    const buildBranch = (parentId: string | null): CommentTreeDTO[] => {
+      const nodes = (childrenMap.get(parentId) ?? []) as any[];
+
+      return nodes.map((comment) => ({
+        id: comment.id,
+        content: comment.content,
+        createdAt: comment.createdAt,
+        author: {
+          id: comment.author.id,
+          name: comment.author.name
+        },
+        replies: buildBranch(comment.id)
+      }));
+    };
+
+    return buildBranch(null);
+  }
+
+
+  async getCommentsTree(postId: string) {
+    const comments = await this.findCommentsByPost(postId);
+    return this.buildCommentTree(comments);
+  }
+
 
   //Buscar um Post específico pelo ID
   async findPostById(postId: string) {
