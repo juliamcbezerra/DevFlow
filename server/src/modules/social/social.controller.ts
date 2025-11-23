@@ -69,7 +69,7 @@ export class SocialController {
   @UseGuards(JwtGuard)
   @Get('posts/:postId/comments')
   async getComments(@Param('postId') postId: string) {
-    return this.socialService.findCommentsByPost(postId);
+    return this.socialService.getCommentsTree(postId);
   }
 
   //Buscar um Post pelo ID

@@ -40,7 +40,7 @@ describe('SocialService & FeedService', () => {
 
     service = module.get(SocialService);
     feed = module.get(FeedService);
-    prisma = module.get(PrismaService) as any; // cast para any para poder usar jest.fn() methods
+    prisma = module.get(PrismaService) as any;
   });
 
   // -----------------------------------------
@@ -170,7 +170,7 @@ describe('SocialService & FeedService', () => {
   });
 
   // -----------------------------------------
-  // findCommentsByPost
+  // findCommentsByPost 
   // -----------------------------------------
   it('findCommentsByPost should return comments ordered asc', async () => {
     const mock = [{ id: 'c1' }];
@@ -184,6 +184,40 @@ describe('SocialService & FeedService', () => {
       include: { author: { select: { name: true, id: true } } },
     });
     expect(result).toEqual(mock);
+  });
+
+  // -----------------------------------------
+  // getCommentsTree
+  // -----------------------------------------
+
+  it('getCommentsTree should return comments tree ordered asc', async () => {
+    const prismaMockReturn = [{
+      id: 'c1',
+      content: 'text',
+      createdAt: new Date('2025-11-23T00:27:41.112Z'),
+      parentId: null,
+      author: { id: 'u1', name: 'User' }
+    }];
+
+    const expected = [{
+      id: 'c1',
+      content: 'text',
+      createdAt: new Date('2025-11-23T00:27:41.112Z'),
+      author: { id: 'u1', name: 'User' },
+      replies: []
+    }];
+
+    prisma.comment.findMany.mockResolvedValue(prismaMockReturn);
+
+    const result = await service.getCommentsTree('p1');
+
+    expect(prisma.comment.findMany).toHaveBeenCalledWith({
+      where: { postId: 'p1' },
+      orderBy: { createdAt: 'asc' },
+      include: { author: { select: { name: true, id: true } } },
+    });
+
+    expect(result).toEqual(expected);
   });
 
   // -----------------------------------------
