@@ -4,8 +4,6 @@ import { Link, useLocation } from "react-router-dom";
 export function Sidebar() {
   const location = useLocation();
   const isActive = (path: string) => location.pathname === path;
-  
-  // Estado para controlar a aba ativa (Visual apenas, lógica real seria no contexto ou URL)
   const [feedFilter, setFeedFilter] = useState<'foryou' | 'following'>('foryou');
 
   const linkClasses = (path: string) => `
@@ -17,10 +15,13 @@ export function Sidebar() {
   `;
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 fixed left-0 top-16 bottom-0 border-r border-zinc-800/50 bg-zinc-900/70 backdrop-blur-xl p-4 overflow-y-auto z-40">
+    // CORREÇÃO AQUI:
+    // Mudei de 'fixed left-4' para 'sticky top-4'.
+    // Isso mantém o visual de "caixa flutuante" (rounded, border, shadow)
+    // Mas permite que ela fique perto do Feed usando o gap do pai.
+    <aside className="hidden lg:flex flex-col w-64 sticky top-4 h-[calc(100vh-2rem)] border border-zinc-800/50 bg-zinc-900/70 backdrop-blur-xl p-4 rounded-2xl shadow-xl shadow-black/20 overflow-y-auto z-40 custom-scrollbar shrink-0">
       
-      {/* --- 1. SELETOR DE FEED (ABAS) --- */}
-      {/* Este bloco TEM que aparecer no topo da sidebar */}
+      {/* Seletor de Feed */}
       <div className="mb-6 bg-zinc-950/50 p-1 rounded-xl border border-zinc-800/80 flex shadow-inner shrink-0">
         <button 
           onClick={() => setFeedFilter('foryou')}
@@ -36,11 +37,15 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* --- 2. NAVEGAÇÃO --- */}
+      {/* Navegação */}
       <nav className="space-y-1 flex-1">
         <Link to="/projects" className={linkClasses("/projects")}>
            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2zm12 3h-6m6 4h-6m6 4h-6"/></svg>
           <span>Projetos</span>
+        </Link>
+        <Link to="/community" className={linkClasses("/community")}>
+           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          <span>Comunidade</span>
         </Link>
 
         <div className="mt-8">
@@ -56,7 +61,7 @@ export function Sidebar() {
         </div>
       </nav>
 
-      {/* --- 3. RODAPÉ: CONFIGURAÇÕES E AJUDA --- */}
+      {/* Rodapé */}
       <div className="mt-auto pt-4 border-t border-zinc-800/50 space-y-1 shrink-0">
         <Link to="/settings" className="flex items-center gap-3 px-4 py-3 text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-xl transition-colors text-sm font-medium group">
           <svg className="w-5 h-5 group-hover:text-violet-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>

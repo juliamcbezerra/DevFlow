@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Navbar } from "./Navbar";
-import { Sidebar } from "./Sidebar";
+// REMOVIDO: import { Sidebar } ...
 
 interface AppShellProps {
   children: ReactNode;
@@ -18,15 +18,14 @@ export function AppShell({ children }: AppShellProps) {
       <div className="relative z-10">
         <Navbar />
 
-        <div className="flex pt-16">
-          <Sidebar />
-
-          <main className="flex-1 lg:ml-64 min-h-[calc(100vh-4rem)] flex justify-center">
-            
-            <div className="w-full max-w-[1100px] mx-auto p-4 sm:p-6">
+        <div className="pt-16">
+          {/* AQUI ESTAVA O ERRO: Removi a <Sidebar /> que ficava aqui */}
+          
+          {/* O children agora ocupa a largura total e centraliza seu próprio conteúdo */}
+          <main className="min-h-[calc(100vh-4rem)] flex justify-center">
+            <div className="w-full p-4 sm:p-6 flex justify-center">
               {children}
             </div>
-            
           </main>
         </div>
       </div>

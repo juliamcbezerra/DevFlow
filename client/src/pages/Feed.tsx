@@ -1,14 +1,14 @@
 import { AppShell } from "../components/layout/AppShell";
+import { Sidebar } from "../components/layout/Sidebar";
 import { useAuth } from "../context/AuthContext";
 
-// Utilitário de Estilo (Glassmorphism)
 const glassCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden hover:border-zinc-700/80 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-violet-900/5";
 
 export default function FeedPage() {
   const { user } = useAuth();
 
   const fakePosts = [
-    { id: 1, author: "Diego Fernandes", role: "CTO @ Rocketseat", time: "2h", content: "Acabei de migrar um projeto gigante de Create React App para Vite. A performance é absurda! 🚀 #react #vite #dx", tags: ["react", "vite", "dx"], likes: 42, comments: 12 },
+    { id: 1, author: "Diego Fernandes", role: "CTO @ Rocketseat", time: "2h", content: "Acabei de migrar um projeto gigante de Create React App para Vite. A performance é absurda! 🚀", tags: ["react", "vite", "dx"], likes: 42, comments: 12 },
     { id: 2, author: "Mayk Brito", role: "Educator", time: "5h", content: "Dica de CSS: usem gap no Flexbox.", code: ".box { display: flex; gap: 16px; }", tags: ["css"], likes: 128, comments: 34 },
   ];
   
@@ -16,16 +16,17 @@ export default function FeedPage() {
 
   return (
     <AppShell>
-      {/* LAYOUT MESTRE: Centralizado */}
-      {/* max-w-[1200px]: Garante espaço para as 3 colunas (Sidebar Esq + Feed + Direita) */}
-      <div className="w-full max-w-[1200px] mx-auto flex gap-8 items-start justify-center">
+      {/* AJUSTE 1: Aumentei o container total para 1350px para caber posts largos + sidebars */}
+      <div className="w-full max-w-[1350px] flex gap-8 items-start justify-center mx-auto">
         
-        {/* --- COLUNA FEED (Central) --- */}
-        {/* flex-1: Ocupa o espaço disponível */}
-        {/* max-w-[600px]: Trava a largura para ficar igual ao Twitter (Leitura agradável) */}
-        <div className="flex-1 w-full max-w-[600px] space-y-6 min-w-0">
+        {/* 1. SIDEBAR ESQUERDA */}
+        <Sidebar />
+
+        {/* 2. FEED CENTRAL (Mais largo agora) */}
+        {/* AJUSTE 2: Mudei de max-w-[600px] para max-w-[700px] */}
+        <div className="flex-1 w-full max-w-[700px] min-w-0 space-y-6">
           
-          {/* 1. CRIAR POST */}
+          {/* CRIAR POST */}
           <div className={glassCardClass + " p-4"}>
             <div className="flex gap-4">
               <img src={`https://ui-avatars.com/api/?name=${user?.name || 'Eu'}&background=random`} alt="Avatar" className="w-10 h-10 rounded-full ring-2 ring-zinc-800/50" />
@@ -46,7 +47,7 @@ export default function FeedPage() {
             </div>
           </div>
 
-          {/* 2. LISTA DE POSTS */}
+          {/* POSTS */}
           {fakePosts.map((post) => (
             <article key={post.id} className={glassCardClass}>
               <div className="p-6">
@@ -73,14 +74,12 @@ export default function FeedPage() {
           ))}
         </div>
 
-        {/* --- COLUNA DIREITA: WIDGETS (Trending & Sugestões) --- */}
-        {/* w-[320px]: Largura Fixa */}
-        {/* shrink-0: Impede que ela suma se a tela apertar */}
-        {/* hidden lg:block: Visível em telas >= 1024px (Seu monitor é 1920, então vai aparecer!) */}
-        <aside className="hidden lg:block w-[320px] shrink-0 space-y-6">
+        {/* 3. DIREITA: WIDGETS */}
+        {/* w-[350px] fixa. shrink-0 impede que ela suma. */}
+        <aside className="hidden lg:block w-[350px] shrink-0 space-y-6">
           <div className="sticky top-24 space-y-6">
             
-            {/* Trending Topics */}
+            {/* Trending */}
             <div className={glassCardClass + " p-5"}>
               <h3 className="font-bold text-white mb-4 text-lg flex items-center gap-2">
                 <span className="text-orange-500">🔥</span> Trending Topics
