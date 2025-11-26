@@ -5,14 +5,8 @@ import { CreateProjectDto } from './dto/create-project.dto';
 
 @Injectable()
 export class ProjectService {
-  // Injete o PrismaService para falar com o banco
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Lógica para [PROJ-01]
-   * @param dto Os dados do novo projeto (nome, descrição)
-   * @param userId O ID do utilizador logado (vem do token JWT)
-   */
   async createProject(dto: CreateProjectDto, userId: string) {
     // 1. Cria o projeto no banco
     const newProject = await this.prisma.project.create({
@@ -27,15 +21,11 @@ export class ProjectService {
           },
         },
       },
-    }); // <-- O 'create' do Prisma termina aqui
+    }); 
 
     return newProject;
-  } // <-- A FUNÇÃO 'createProject' TERMINA AQUI
+  }
 
-  /**
-   * LÓGICA PARA [PROJ-02] (É SÓ ISTO!)
-   * @param userId O ID do utilizador logado (vem do token JWT)
-  */
   async findMyProjects(userId: string) {
     // Encontra todos os projetos onde o ownerId é o ID do utilizador
     return this.prisma.project.findMany({
@@ -43,9 +33,9 @@ export class ProjectService {
         ownerId: userId,
       },
       orderBy: {
-        createdAt: 'desc', // Opcional: mostra os mais novos primeiro
+        createdAt: 'desc', 
       },
     });
   }
   
-} // <-- A CLASSE 'ProjectService' TERMINA AQUI
+}

@@ -32,21 +32,15 @@ export class ProjectController {
     return this.projectService.createProject(dto, userId);
   }
 
-    /**
-   * ENDPOINT PARA [PROJ-02]: Listar os meus projetos
-   * Rota: GET /projects
-   */
-  @UseGuards(JwtGuard) // 2. REUTILIZE o Guard
-  @Get() // 3. É um pedido GET
-  async findMyProjects(@Req() req: any) { // 4. REUTILIZE o @Req
-    // 5. REUTILIZE a lógica para pegar o ID do utilizador
+  @UseGuards(JwtGuard) 
+  @Get() 
+  async findMyProjects(@Req() req: any) { 
     const userId = req.user.id;
 
     if (!userId) {
       throw new Error('ID do utilizador não encontrado no token.');
     }
 
-    // 6. Chame o novo serviço
     return this.projectService.findMyProjects(userId);
   }
   
