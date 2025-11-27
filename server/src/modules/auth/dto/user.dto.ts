@@ -4,10 +4,11 @@ import {
   IsNotEmpty,
   IsString,
   MinLength,
+  IsOptional, // <--- Importante adicionar isso
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger'; 
 
-// Interface não precisa de decorator do Swagger, pois não é usada diretamente na validação
+// Interface para tipagem interna (opcional)
 export interface UserDto {
   id: string;
   email: string;
@@ -33,6 +34,17 @@ export class CreateUserDto {
   @IsNotEmpty()
   name: string;
 
+  // --- ADICIONE ESTE CAMPO NOVO 👇 ---
+  @ApiProperty({
+    description: 'Nome de usuário único (slug). Se não enviado, será gerado automaticamente.',
+    example: 'millena_dev',
+    required: false, // Marca como opcional no Swagger
+  })
+  @IsOptional() // Marca como opcional na validação
+  @IsString()
+  username?: string;
+  // ----------------------------------
+
   @ApiProperty({
     description: 'Senha segura (mínimo 8 caracteres)',
     example: 'senhaSegura123!',
@@ -44,16 +56,13 @@ export class CreateUserDto {
   password: string;
 }
 
-// Esta classe define o que o Backend RESPONDE. É útil documentar também!
+// ATENÇÃO: Como mudamos para Cookies, o login não retorna mais tokens no JSON.
+// Esta classe abaixo servia para quando retornávamos o token. 
+// Você pode mantê-la se quiser usar em outro lugar, mas o login agora retorna apenas o User.
 export class SessionDto {
   @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
   userId: string;
-
-  @ApiProperty({ description: 'Token JWT para acesso', example: 'eyJhbGciOiJIUz...' })
-  accessToken: string;
-
-  @ApiProperty({ description: 'Token para renovar a sessão', example: 'eyJhbGciOiJIUz...' })
-  refreshToken: string;
+  // Tokens foram removidos daqui pois agora vão via Cookie HttpOnly
 }
 
 export class LoginSessionDto {
