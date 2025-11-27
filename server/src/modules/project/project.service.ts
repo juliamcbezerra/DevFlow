@@ -112,5 +112,19 @@ export class ProjectService {
   };
 }
 
+async getPopularTags() {
+  const rows = await this.prisma.$queryRaw<{ tag: string; count: number }[]>`
+    SELECT tag, COUNT(*) AS count
+    FROM (
+      SELECT UNNEST("tags") AS tag
+      FROM "Project"
+      WHERE "isPublic" = true
+    ) t
+    GROUP BY tag
+    ORDER BY count DESC
+    LIMIT 20
+  `;
+  return rows;
+}
   
 }

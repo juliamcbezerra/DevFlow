@@ -67,3 +67,14 @@ async unfollowProject(
 }
 
 }
+
+@UseGuards(JwtGuard)
+@Controller('tags')
+export class TagsController {
+  constructor(private readonly projectService: ProjectService) {}
+
+  @Get('popular')
+  async popular() {
+    return this.projectService.getPopularTags();
+  }
+}
