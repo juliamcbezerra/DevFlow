@@ -15,8 +15,23 @@ export class UserService {
       select: {
         id: true,
         name: true,
-        interestTags: true, // Retorna as tags atualizadas
+        interestTags: true,
       }
+    });
+  }
+
+  async findAll() {
+    return await this.prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        avatarUrl: true,
+        interestTags: true,
+        // _count: { select: { followedBy: true } } // Descomente se já tiver a relação Follows
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
     });
   }
 }

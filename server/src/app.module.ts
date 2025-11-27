@@ -6,6 +6,12 @@ import { SocialModule } from './modules/social/social.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
-  imports: [AuthModule, UserModule, ProjectModule, SocialModule, PrismaModule],
+  imports: [
+    AuthModule, 
+    UserModule, 
+    ProjectModule, 
+    SocialModule, 
+    PrismaModule
+  ],
 })
 export class AppModule {}
