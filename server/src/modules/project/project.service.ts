@@ -1,5 +1,5 @@
 // server/src/modules/project/project.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 
@@ -47,5 +47,80 @@ export class ProjectService {
       },
     });
   }
+
+  async followProject(userId: string, projectId: string) {
+    // 1. Verifica se o projeto existe
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { id: true }, // sem isPrivate porque não existe no schema
+    });
+
+    if (!project) {
+      throw new NotFoundException('Projeto não encontrado');
+    }
+
+    // 2. Verifica se o usuário já segue o projeto
+    const alreadyFollowing = await this.prisma.followProject.findUnique({
+      where: {
+        userId_projectId: { userId, projectId },
+      },
+    });
+
+    if (alreadyFollowing) {
+      return {
+        status: 'ok',
+        message: 'Você já segue este projeto',
+      };
+    }
+
+    // 3. Cria o follow
+    await this.prisma.followProject.create({
+      data: { userId, projectId },
+    });
+
+    return {
+      status: 'ok',
+      message: 'Agora você está seguindo este projeto!',
+    };
+  }
+
+  async unfollowProject(userId: string, projectId: string) {
+  // 1. Verifica se o projeto existe
+  const project = await this.prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true },
+  });
+
+  if (!project) {
+    throw new NotFoundException('Projeto não encontrado');
+  }
+
+  // 2. Verifica se o usuário segue o projeto
+  const follow = await this.prisma.followProject.findUnique({
+    where: {
+      userId_projectId: { userId, projectId },
+    },
+  });
+
+  if (!follow) {
+    return {
+      status: 'ok',
+      message: 'Você não está seguindo este projeto',
+    };
+  }
+
+  // 3. Deixa de seguir (remove do banco)
+  await this.prisma.followProject.delete({
+    where: {
+      userId_projectId: { userId, projectId },
+    },
+  });
+
+  return {
+    status: 'ok',
+    message: 'Você deixou de seguir este projeto.',
+  };
+}
+
   
 } // <-- A CLASSE 'ProjectService' TERMINA AQUI

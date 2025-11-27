@@ -7,6 +7,8 @@ import {
   Req,
   ValidationPipe,
   Get,
+  Param,
+  Delete,
 } from '@nestjs/common';
 import { ProjectService } from './project.service';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -49,5 +51,25 @@ export class ProjectController {
     // 6. Chame o novo serviço
     return this.projectService.findMyProjects(userId);
   }
-  
+
+  @UseGuards(JwtGuard)
+  @Post(':projectId/follow')
+  async followProject(
+    @Param('projectId') projectId: string,
+    @Req() req,
+  ) {
+    const userId = req.user.id;
+    return this.projectService.followProject(userId, projectId);
+  }
+
+  @UseGuards(JwtGuard)
+  @Delete(':projectId/unfollow')
+async unfollowProject(
+  @Param('projectId') projectId: string,
+  @Req() req,
+) {
+  const userId = req.user.id;
+  return this.projectService.unfollowProject(userId, projectId);
+}
+
 }
