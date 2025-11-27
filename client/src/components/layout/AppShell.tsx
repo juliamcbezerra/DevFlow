@@ -20,14 +20,14 @@ export function AppShell({ children }: AppShellProps) {
         <Navbar />
 
         {/* Container Principal */}
-        <div className="flex justify-center w-full pt-20 pb-10">
+        <div className="flex justify-center w-full pt-24 pb-10">
           {/* max-w-[1200px]: Limita a largura do conteúdo centralizado */}
-          <main className="w-full max-w-[1200px] px-4 flex gap-8 items-start">
+          <main className="w-full max-w-[1440px] px-4 sm:px-6 flex gap-6 items-start">
             {children}
           </main>
         </div>
       </div>
       
-    </div>
+    </div>  
   );
 }
