@@ -28,7 +28,7 @@ export default function FeedPage() {
         <Sidebar />
 
         {/* 2. FEED CENTRAL */}
-        <div className="flex-1 min-w-0 space-y-6 pb-10">
+        <div className="flex-1 min-w-0 max-w-[800px] space-y-6 pb-20">
           
           {/* Criar Post */}
           <div className={postCardClass + " p-4"}>
