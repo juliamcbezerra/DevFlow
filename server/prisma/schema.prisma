@@ -9,7 +9,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- ENUMS (Tipos fixos) ---
+// --- ENUMS ---
 
 enum PostType {
   TEXT
@@ -17,90 +17,129 @@ enum PostType {
   POLL
 }
 
-enum TaskStatus {
-  TODO
-  IN_PROGRESS
-  DONE
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
 }
 
-// --- MODELOS PRINCIPAIS ---
+// --- MODELOS DE USUÁRIO E AUTH ---
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  password  String
-  createdAt DateTime @default(now())
-  interestTags String[] @default([])
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  username     String  @unique // Importante para URL de perfil
+  password     String
+  avatarUrl    String?
+  bio          String?
+  interestTags String[] @default([]) // Ex: ["React", "Node"]
+  createdAt    DateTime @default(now())
 
-  // Relações
-  projects Project[]
+  // Auth
   sessions Session[]
-  
-  // Relações Sociais
+
+  // Relações Sociais (Usuário x Usuário)
+  followedBy Follows[] @relation("following")
+  following  Follows[] @relation("follower")
+
+  // Comunidades (Usuário x Projeto)
+  projectsOwned Project[] // Projetos que ele criou
+  memberships   Member[]  // Projetos que ele participa
+  followedProjects FollowProject[] // Projetos que ele apenas segue (feed)
+
+  // Conteúdo
   posts    Post[]
   comments Comment[]
   votes    Vote[]
-  follows FollowProject[]
 }
 
 model Session {
   id           String   @id @default(uuid())
+  sessionToken String   @unique // O token do cookie
   userId       String
-  accessToken  String   @unique
-  refreshToken String
+  expires      DateTime
   createdAt    DateTime @default(now())
 
-  // Relações
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+// --- GRAFO SOCIAL (QUEM SEGUE QUEM) ---
+
+model Follows {
+  follower    User   @relation("follower", fields: [followerId], references: [id])
+  followerId  String
+  following   User   @relation("following", fields: [followingId], references: [id])
+  followingId String
+
+  createdAt DateTime @default(now())
+
+  @@id([followerId, followingId]) // Chave composta
+}
+
+// --- COMUNIDADES (PROJETOS) ---
 
 model Project {
   id          String   @id @default(uuid())
   name        String
   description String?
+  slug        String?  @unique // Ex: rocketseat-education
+  isPublic    Boolean  @default(true)
+  avatarUrl   String?
+  tags        String[] @default([]) // Tags da comunidade
   createdAt   DateTime @default(now())
 
-  // Relações
+  // Dono (Criador)
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   ownerId String
 
-  // Conteúdo do Projeto
-  posts Post[] // O Feed do Projeto
-  tasks Task[] // O Kanban do Projeto
+  // Membros (Quem participa)
+  members Member[]
+  
+  // Seguidores (Quem acompanha o feed sem ser membro)
   followers FollowProject[]
+
+  // Conteúdo
+  posts Post[] 
 }
 
-// --- MODELOS DO "ESPAÇO DE TRABALHO" (KANBAN) ---
+model Member {
+  id        String   @id @default(uuid())
+  role      Role     @default(MEMBER)
+  joinedAt  DateTime @default(now())
 
-model Task {
-  id          String     @id @default(uuid())
-  title       String
-  description String?
-  status      TaskStatus @default(TODO)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  // Relações
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId String
 
-  @@index([projectId])
+  @@unique([userId, projectId]) // Um usuário só entra uma vez no projeto
 }
 
-// --- MODELOS SOCIAIS (FEED TIPO REDDIT) ---
+model FollowProject {
+  id        String   @id @default(uuid())
+  userId    String
+  projectId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+}
+
+// --- FEED (POSTS E INTERAÇÕES) ---
 
 model Post {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // Soft delete
 
-  title   String
-  content Json     // Suporta blocos de texto, código ou enquetes
-  type    PostType @default(TEXT)
-  isPAP   Boolean  @default(false) // "Post de Abertura do Projeto"
-
+  title   String?   // Opcional agora (estilo Twitter/Bluesky)
+  content Json      // Rich text / blocos
+  type    PostType  @default(TEXT)
+  
   // Relações
   author    User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId  String
@@ -119,51 +158,31 @@ model Comment {
   createdAt DateTime @default(now())
   content   String
 
-  // Relações
   author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId String
   post     Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId   String
 
-  // Respostas Aninhadas (Nested Replies)
+  // Respostas Aninhadas
   parent   Comment?  @relation("NestedComments", fields: [parentId], references: [id], onDelete: Cascade)
   parentId String?
   replies  Comment[] @relation("NestedComments")
 
   votes Vote[]
-
-  @@index([postId])
-  @@index([parentId])
 }
 
 model Vote {
   id String @id @default(uuid())
+  value Int // 1 ou -1
 
-  value Int // +1 (Upvote) ou -1 (Downvote)
-
-  // Quem votou
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
 
-  // Onde votou (Post ou Comentário)
   post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId    String?
   comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
   commentId String?
 
-  // Restrição: Um usuário só pode votar uma vez em cada item
   @@unique([userId, postId])
   @@unique([userId, commentId])
-}
-
-model FollowProject {
-  id        String   @id @default(uuid())
-  userId    String
-  projectId String
-  createdAt DateTime @default(now())
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, projectId]) // não permite seguir o mesmo projeto mais de uma vez
 }
