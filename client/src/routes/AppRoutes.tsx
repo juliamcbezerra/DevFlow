@@ -3,6 +3,9 @@ import LoginPage from '../pages/Login';
 import SignupPage from '../pages/Signup';
 import FeedPage from '../pages/Feed';
 import ExplorePage from '../pages/Explore';
+import ProfilePage from '../pages/Profile';
+import ProjectPage from '../pages/Project';
+import CommunityPage from '../pages/Community';
 import { PrivateRoute } from './PrivateRoute';
 
 export function AppRoutes() {
@@ -22,6 +25,15 @@ export function AppRoutes() {
         
         {/* Usando /projects para bater com a Sidebar */}
         <Route path="/projects" element={<ExplorePage />} /> 
+
+        {/* Rota da Comunidade */}
+        <Route path="/community" element={<CommunityPage />} />
+
+        {/* Rota de Perfil Dinâmico */}
+        <Route path="/profile/:username" element={<ProfilePage />} />
+
+        {/* Rota de Projeto Dinâmico */}
+        <Route path="/project/:id" element={<ProjectPage />} />
 
         {/* Adicione aqui as futuras páginas como /projects, /profile etc */}
       </Route>
