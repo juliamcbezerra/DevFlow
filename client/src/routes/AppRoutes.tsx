@@ -33,7 +33,7 @@ export function AppRoutes() {
         <Route path="/profile/:username" element={<ProfilePage />} />
 
         {/* Rota de Projeto Dinâmico */}
-        <Route path="/project/:id" element={<ProjectPage />} />
+        <Route path="/projects/:id" element={<ProjectPage />} />
 
         {/* Adicione aqui as futuras páginas como /projects, /profile etc */}
       </Route>

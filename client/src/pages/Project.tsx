@@ -1,112 +1,212 @@
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { Sidebar } from "../components/layout/Sidebar";
+import { useAuth } from "../context/AuthContext";
+import { projectService, ProjectDetails } from "../services/projectService";
+import api from "../services/api"; 
+import { 
+    Loader2, Send, MessageCircle, ArrowBigUp, ArrowBigDown, 
+    Share2, Users, Hash, ShieldCheck, Terminal, LogOut, UserPlus
+} from "lucide-react";
 
-const PROJECT_MOCK = {
-  name: "Rocketseat Education",
-  description: "Comunidade oficial para alunos e entusiastas da Rocketseat. Tire dúvidas, compartilhe projetos e evolua sua carreira.",
-  members: 45300,
-  online: 120,
-  isMember: false,
-  color: "from-purple-600 to-pink-600"
-};
-
-const PROJECT_POSTS = [
-  { id: 1, author: "Mayk Brito", role: "Admin", content: "Pessoal, saiu atualização no curso de Explorer! Confiram o módulo de React.", tags: ["Aviso", "React"], likes: 340, comments: 45 },
-  { id: 2, author: "Aluno Dev", role: "Member", content: "Alguém pode me ajudar com esse erro no Docker? Estou tentando rodar o Postgres mas...", tags: ["Dúvida", "Docker"], likes: 2, comments: 8 },
-];
+const postCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden hover:border-zinc-700/80 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-violet-900/5";
 
 export default function ProjectPage() {
+  const { id } = useParams<{ id: string }>(); // Pega o ID ou SLUG
+  const { user } = useAuth();
+  
+  const [project, setProject] = useState<ProjectDetails | null>(null);
+  const [posts, setPosts] = useState<any[]>([]);
+  
+  const [loadingProject, setLoadingProject] = useState(true);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+  const [joining, setJoining] = useState(false);
+  
+  const [newPostContent, setNewPostContent] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
+
+  useEffect(() => {
+    async function loadData() {
+        if (!id) return;
+        try {
+            setLoadingProject(true);
+            // USANDO O SERVICE: Busca por slug ou ID
+            const projData = await projectService.getById(id);
+            setProject(projData);
+
+            setLoadingPosts(true);
+            // Busca posts (api direta pois ainda não refatoramos postsService para filtro por projeto)
+            const { data: postsData } = await api.get(`/social/projects/${projData.id}/posts`);
+            setPosts(postsData);
+        } catch (error) {
+            console.error("Erro ao carregar", error);
+        } finally {
+            setLoadingProject(false);
+            setLoadingPosts(false);
+        }
+    }
+    loadData();
+  }, [id]);
+
+  const handleJoinLeave = async () => {
+      if (!project) return;
+      setJoining(true);
+      try {
+          if (project.isMember) {
+              // USANDO O SERVICE
+              await projectService.leave(project.id);
+              setProject(prev => prev ? ({ ...prev, isMember: false, _count: { ...prev._count, members: prev._count.members - 1 } }) : null);
+          } else {
+              // USANDO O SERVICE
+              await projectService.join(project.id);
+              setProject(prev => prev ? ({ ...prev, isMember: true, _count: { ...prev._count, members: prev._count.members + 1 } }) : null);
+          }
+      } catch (err) {
+          console.error(err);
+          alert("Erro ao atualizar status de membro.");
+      } finally {
+          setJoining(false);
+      }
+  };
+
+  const handlePublish = async () => {
+    if (!newPostContent.trim() || !project) return;
+    setIsPublishing(true);
+    try {
+        const { data: newPost } = await api.post(`/social/projects/${project.id}/posts`, { content: newPostContent });
+        setPosts([newPost, ...posts]);
+        setNewPostContent("");
+    } catch (error) {
+        console.error("Erro ao postar", error);
+    } finally {
+        setIsPublishing(false);
+    }
+  };
+
+  const votePost = async (postId: string, value: number) => {
+    setPosts(prev => prev.map(p => p.id === postId ? {...p, _count: {...p._count, votes: p._count.votes + value}} : p));
+    await api.post('/social/vote', { postId, value });
+  };
+
+  const formatDate = (dateString: string) => {
+    try { return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(dateString)); } catch (e) { return ""; }
+  };
+
+  if (loadingProject) return <AppShell><Sidebar /><div className="flex-1 flex items-center justify-center h-screen"><Loader2 className="animate-spin text-violet-500"/></div></AppShell>;
+  if (!project) return <AppShell><Sidebar /><div className="flex-1 p-10 text-center text-zinc-500">Projeto não encontrado.</div></AppShell>;
+
   return (
     <AppShell>
       <Sidebar />
-      
-      <div className="flex-1 min-w-0 flex justify-center h-full overflow-hidden">
+
+      <div className="flex-1 min-w-0 max-w-[900px] space-y-6 pb-20 pt-6 px-4">
         
-        {/* CONTAINER DO MEIO (FEED DO PROJETO) */}
-        <div className="flex-1 max-w-[640px] h-full overflow-y-auto no-scrollbar pb-20 pt-6 px-4">
-           
-           {/* HEADER DO PROJETO */}
-           <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-6 mb-6 flex flex-col items-center text-center">
-              <div className={`w-20 h-20 rounded-2xl bg-linear-to-br ${PROJECT_MOCK.color} flex items-center justify-center shadow-lg mb-4`}>
-                 <span className="text-3xl font-bold text-white">R</span>
-              </div>
-              <h1 className="text-2xl font-bold text-white mb-2">{PROJECT_MOCK.name}</h1>
-              <p className="text-zinc-400 text-sm mb-6 max-w-sm">{PROJECT_MOCK.description}</p>
-              
-              <div className="flex gap-3 w-full">
-                 <button className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-violet-600/20">
-                    Entrar na Comunidade
-                 </button>
-                 <button className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl font-bold transition-colors">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
-                 </button>
-              </div>
-           </div>
-
-           {/* FEED */}
-           <h3 className="text-zinc-500 font-bold text-xs uppercase tracking-wider mb-4 pl-2">Discussões Recentes</h3>
-           <div className="space-y-4">
-              {PROJECT_POSTS.map(post => (
-                 <div key={post.id} className="bg-zinc-900/40 border border-zinc-800/60 p-5 rounded-2xl hover:border-zinc-700 transition-colors">
-                    <div className="flex items-center justify-between mb-3">
-                       <div className="flex items-center gap-3">
-                          <img src={`https://ui-avatars.com/api/?name=${post.author}&background=random`} className="w-8 h-8 rounded-full" />
-                          <div>
-                             <p className="text-sm font-bold text-white hover:underline cursor-pointer">{post.author}</p>
-                             <p className="text-[10px] text-zinc-500 uppercase font-bold">{post.role}</p>
-                          </div>
-                       </div>
-                       <div className="flex gap-2">
-                          {post.tags.map(tag => (
-                             <span key={tag} className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-1 rounded-md border border-zinc-700">{tag}</span>
-                          ))}
-                       </div>
+        {/* HEADER COM AVATAR E SLUG */}
+        <div className="relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/50 backdrop-blur-xl">
+            <div className={`h-32 w-full bg-linear-to-r from-violet-900/40 to-blue-900/40`}></div>
+            
+            <div className="px-6 pb-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end -mt-10 mb-4 gap-4">
+                    <div className="flex items-end gap-4">
+                        <div className="w-24 h-24 rounded-2xl bg-zinc-950 border-4 border-zinc-950 flex items-center justify-center text-4xl shadow-xl overflow-hidden">
+                            {project.avatarUrl ? (
+                                <img src={project.avatarUrl} className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="font-bold text-white">{project.name[0]}</span>
+                            )}
+                        </div>
+                        <div className="mb-1">
+                            <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+                                {project.name}
+                                {project.ownerId === user?.id && <span title="Você é o dono"><ShieldCheck size={20} className="text-green-500" /></span>}
+                            </h1>
+                            <p className="text-sm text-zinc-400 font-mono">c/{project.slug}</p>
+                        </div>
                     </div>
-                    <p className="text-zinc-300 mb-4 text-sm leading-relaxed">{post.content}</p>
-                    <div className="flex gap-6 text-zinc-500 text-sm">
-                       <button className="flex items-center gap-2 hover:text-green-400 transition-colors"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"/></svg> {post.likes}</button>
-                       <button className="flex items-center gap-2 hover:text-blue-400 transition-colors"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"/></svg> {post.comments}</button>
-                    </div>
-                 </div>
-              ))}
-           </div>
+                    
+                    <button 
+                        onClick={handleJoinLeave}
+                        disabled={joining}
+                        className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg flex items-center gap-2 ${project.isMember ? 'bg-zinc-800 border border-zinc-700 text-zinc-300 hover:border-red-500/50 hover:text-red-400 hover:bg-zinc-900' : 'bg-violet-600 hover:bg-violet-700 text-white'}`}
+                    >
+                        {joining ? <Loader2 className="animate-spin w-4 h-4"/> : (project.isMember ? <><LogOut size={16}/> Sair</> : <><UserPlus size={16}/> Participar</>)}
+                    </button>
+                </div>
 
+                <p className="text-zinc-300 mb-6 text-sm leading-relaxed max-w-2xl">{project.description || "Bem-vindo à comunidade!"}</p>
+                
+                <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-zinc-500 border-t border-zinc-800/50 pt-4">
+                    <span className="flex items-center gap-1.5 text-zinc-300"><Users size={14}/> {project._count.members} Membros</span>
+                    <span className="flex items-center gap-1.5"><Terminal size={14}/> {project._count.posts} Posts</span>
+                    <div className="h-4 w-px bg-zinc-800 mx-2"></div>
+                    {project.tags.map(tag => <span key={tag} className="bg-zinc-800/50 text-zinc-400 px-2 py-1 rounded-md">#{tag}</span>)}
+                </div>
+            </div>
         </div>
 
-        {/* SIDEBAR DE INFORMAÇÕES (DIREITA) */}
-        <div className="hidden lg:block w-72 h-full p-6 border-l border-zinc-800/50 space-y-6">
-           <div>
-              <h3 className="text-zinc-400 font-bold text-sm mb-4">Sobre</h3>
-              <div className="space-y-4">
-                 <div className="flex items-center gap-3 text-sm text-zinc-300">
-                    <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center"><svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg></div>
-                    <div>
-                       <p className="font-bold text-white">{PROJECT_MOCK.members}</p>
-                       <p className="text-xs text-zinc-500">Membros</p>
+        {/* INPUT DE POST */}
+        {project.isMember ? (
+            <div className={postCardClass + " p-4"}>
+                <div className="flex gap-4">
+                    <img src={user?.avatarUrl || `https://ui-avatars.com/api/?name=${user?.name}`} className="w-10 h-10 rounded-full ring-2 ring-zinc-800/50 object-cover" />
+                    <div className="flex-1">
+                        <textarea 
+                            value={newPostContent}
+                            onChange={(e) => setNewPostContent(e.target.value)}
+                            placeholder={`Compartilhe algo com c/${project.name}...`} 
+                            className="w-full bg-zinc-950/50 border border-zinc-800/80 text-zinc-200 rounded-xl px-4 py-3 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all placeholder-zinc-600 resize-none h-24 text-sm"
+                        />
+                        <div className="flex justify-end mt-2">
+                            <button onClick={handlePublish} disabled={isPublishing || !newPostContent.trim()} className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-2 rounded-lg font-bold text-xs transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-violet-900/20">
+                                {isPublishing ? <Loader2 className="animate-spin w-3 h-3"/> : <Send size={14}/>} Publicar
+                            </button>
+                        </div>
                     </div>
-                 </div>
-                 <div className="flex items-center gap-3 text-sm text-zinc-300">
-                    <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center"><svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z"/></svg></div>
-                    <div>
-                       <p className="font-bold text-white">{PROJECT_MOCK.online}</p>
-                       <p className="text-xs text-zinc-500">Online agora</p>
+                </div>
+            </div>
+        ) : (
+            <div className="bg-zinc-900/20 border border-dashed border-zinc-800 rounded-2xl p-6 text-center">
+                <p className="text-zinc-400 font-medium mb-1">Você é um visitante.</p>
+                <p className="text-xs text-zinc-500">Entre na comunidade para postar e interagir.</p>
+            </div>
+        )}
+
+        {/* POSTS LIST */}
+        {loadingPosts ? (
+             <div className="space-y-4">{[1,2,3].map(i => <div key={i} className="h-40 bg-zinc-900/40 rounded-2xl animate-pulse border border-zinc-800/50"></div>)}</div>
+        ) : (
+            <div className="space-y-4">
+                {posts.length > 0 ? posts.map((post) => (
+                    <article key={post.id} className={postCardClass}>
+                        <div className="flex h-full">
+                            <div className="w-12 bg-zinc-950/30 flex flex-col items-center py-3 border-r border-zinc-800/50 gap-1 shrink-0">
+                                <button onClick={() => votePost(post.id, 1)} className="text-zinc-500 hover:text-orange-500 p-1 rounded hover:bg-zinc-800/50 transition-colors"><ArrowBigUp size={24} strokeWidth={2} /></button>
+                                <span className="font-bold text-sm text-zinc-200 my-1">{post._count?.votes || 0}</span>
+                                <button onClick={() => votePost(post.id, -1)} className="text-zinc-500 hover:text-violet-500 p-1 rounded hover:bg-zinc-800/50 transition-colors"><ArrowBigDown size={24} strokeWidth={2} /></button>
+                            </div>
+                            <div className="flex-1 p-4">
+                                <div className="flex items-center gap-2 mb-2 text-xs text-zinc-500">
+                                    <span className="font-bold text-zinc-300 hover:text-white cursor-pointer">@{post.author.username}</span>
+                                    <span>•</span>
+                                    <span>{formatDate(post.createdAt)}</span>
+                                </div>
+                                <div className="text-zinc-200 mb-3 text-sm whitespace-pre-wrap leading-relaxed">{post.content}</div>
+                                <div className="flex gap-4 text-zinc-500 text-xs font-bold">
+                                    <button className="flex items-center gap-2 hover:bg-zinc-800/50 px-2 py-1 rounded transition-colors"><MessageCircle size={16}/> {post._count?.comments || 0} Comentários</button>
+                                    <button className="flex items-center gap-2 hover:bg-zinc-800/50 px-2 py-1 rounded transition-colors"><Share2 size={16}/> Compartilhar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                )) : (
+                    <div className="text-center py-16 text-zinc-500 border border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20">
+                        <div className="bg-zinc-900 p-3 rounded-full inline-block mb-3"><Terminal size={24}/></div>
+                        <p>Nenhum post ainda. Seja o primeiro!</p>
                     </div>
-                 </div>
-              </div>
-           </div>
-
-           <div className="h-px bg-zinc-800"></div>
-
-           <div>
-              <h3 className="text-zinc-400 font-bold text-sm mb-4">Admins</h3>
-              <div className="flex -space-x-2">
-                 {[1,2,3].map(i => (
-                    <img key={i} src={`https://ui-avatars.com/api/?background=random&name=Admin${i}`} className="w-8 h-8 rounded-full ring-2 ring-zinc-900" />
-                 ))}
-              </div>
-           </div>
-        </div>
-
+                )}
+            </div>
+        )}
       </div>
     </AppShell>
   );

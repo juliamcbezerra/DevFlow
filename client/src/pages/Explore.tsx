@@ -1,21 +1,28 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
-import { Sidebar } from "../components/layout/Sidebar"; 
-import { Users, Hash } from "lucide-react";
-import api from "../services/api";
+import { Sidebar } from "../components/layout/Sidebar";
+import { Users, Hash, Search, ArrowRight } from "lucide-react";
+import { projectService } from "../services/projectService";
+
+const TAG_FILTERS = ["Todos", "Javascript", "React", "Node", "Python", "DevOps", "AI"];
 
 export default function ProjectsListPage() {
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('type') || 'foryou';
+  
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeTagFilter, setActiveTagFilter] = useState("Todos");
 
   useEffect(() => {
     async function loadProjects() {
         setLoading(true);
         try {
-            const { data } = await api.get(`/projects?type=${activeTab}`);
+            // USANDO O SERVICE AQUI
+            // O 'as' garante a tipagem correta para a função
+            const data = await projectService.getAll(activeTab as 'foryou' | 'following');
             setProjects(data);
         } catch (error) {
             console.error(error);
@@ -26,134 +33,137 @@ export default function ProjectsListPage() {
     loadProjects();
   }, [activeTab]);
 
+  const filteredProjects = projects.filter(proj => {
+      const matchesSearch = 
+        proj.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (proj.slug && proj.slug.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesTag = activeTagFilter === "Todos" 
+        ? true 
+        : proj.tags && proj.tags.some((t: string) => t.toLowerCase() === activeTagFilter.toLowerCase());
+
+      return matchesSearch && matchesTag;
+  });
+
   return (
     <AppShell>
       <Sidebar />
 
-      {/* COLUNA CENTRAL - LAYOUT CONSISTENTE */}
-      <div className="flex-1 min-w-0 max-w-[1000px] px-4 space-y-8 pb-20"> {/* Mesma estrutura do Feed */}
-        
-        {/* Header da página */}
-        <div className="mb-6">
-            <h1 className="text-3xl font-bold text-white mb-2">
-                {activeTab === 'foryou' ? '✨ Projetos Recomendados' : '📂 Meus Projetos'}
-            </h1>
-            <p className="text-zinc-400 text-sm">
-                {activeTab === 'foryou' 
-                    ? 'Baseado nas suas tags de interesse' 
-                    : 'Comunidades que você faz parte'}
-            </p>
-        </div>
+      <div className="flex-1 min-w-0 pb-20 overflow-y-auto no-scrollbar h-full">
+        <div className="max-w-[1000px] px-4 space-y-8">
+            
+            {/* Header + Busca */}
+            <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-white tracking-tight">
+                        {activeTab === 'foryou' ? '✨ Projetos Recomendados' : '📂 Meus Projetos'}
+                    </h1>
+                    <p className="text-zinc-400 mt-2">
+                        {activeTab === 'foryou' ? 'Descubra comunidades baseadas nos seus interesses.' : 'Gerencie as comunidades que você participa.'}
+                    </p>
+                </div>
 
-        {/* Grid de projetos */}
-        {loading ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {[1,2,3,4].map(i => (
-                    <div key={i} className="h-48 bg-zinc-900/40 rounded-2xl animate-pulse border border-zinc-800/50"></div>
+                <div className="relative group w-full md:w-72">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="h-5 w-5 text-zinc-500 group-focus-within:text-violet-500 transition-colors" />
+                    </div>
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="block w-full pl-10 pr-3 py-2.5 border border-zinc-800 rounded-xl leading-5 bg-zinc-950/50 text-zinc-300 placeholder-zinc-500 focus:outline-none focus:bg-zinc-900 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 sm:text-sm transition-all shadow-sm"
+                        placeholder="Buscar projetos..."
+                    />
+                </div>
+            </div>
+
+            {/* Filtros de Tags */}
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                {TAG_FILTERS.map(tag => (
+                    <button 
+                        key={tag}
+                        onClick={() => setActiveTagFilter(tag)}
+                        className={`
+                            px-4 py-1.5 rounded-full text-xs font-bold transition-all border whitespace-nowrap
+                            ${activeTagFilter === tag 
+                                ? "bg-violet-500/10 border-violet-500/50 text-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.15)]" 
+                                : "bg-zinc-900/50 border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300"}
+                        `}
+                    >
+                        {tag}
+                    </button>
                 ))}
             </div>
-        ) : projects.length === 0 ? (
-            <div className="text-center py-16 flex flex-col items-center">
-                <div className="bg-zinc-900/80 p-4 rounded-full mb-4 ring-1 ring-zinc-800">
-                    <Users size={32} className="text-zinc-500" />
+
+            {/* Grid de Projetos */}
+            {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {[1,2,3,4,5,6].map(i => <div key={i} className="h-72 bg-zinc-900/40 border border-zinc-800/60 rounded-2xl animate-pulse"></div>)}
                 </div>
-                <h3 className="text-zinc-300 font-bold text-lg mb-1">Nenhum projeto encontrado</h3>
-                <p className="text-zinc-500 text-sm max-w-xs">
-                    {activeTab === 'following' 
-                        ? "Você ainda não segue nenhum projeto." 
-                        : "Entre em comunidades para ver conteúdo!"}
-                </p>
-            </div>
-        ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {projects.map(proj => (
-                    <Link to={`/projects/${proj.id}`} key={proj.id} className="block group">
-                        <div className="bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl p-6 hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-900/10 transition-all duration-300">
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {filteredProjects.map((proj) => (
+                        <div key={proj.id} className="group relative bg-zinc-900/40 backdrop-blur-sm border border-zinc-800/60 rounded-2xl p-6 flex flex-col items-center text-center hover:bg-zinc-900/60 hover:border-zinc-700 transition-all duration-300 hover:-translate-y-1 shadow-lg hover:shadow-xl hover:shadow-black/20">
                             
-                            {/* Header do card */}
-                            <div className="flex items-start gap-4 mb-4">
-                                {/* Avatar do projeto */}
-                                <div className="w-16 h-16 rounded-xl bg-linear-to-br from-violet-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white shadow-lg shrink-0">
-                                    {proj.name[0]}
-                                </div>
-                                
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="text-lg font-bold text-white group-hover:text-violet-400 transition-colors mb-1 truncate">
-                                        {proj.name}
-                                    </h3>
-                                    <p className="text-xs text-zinc-500 flex items-center gap-2">
-                                        <Users size={12} />
-                                        <span>{proj.memberCount || 0} membros</span>
-                                    </p>
-                                </div>
+                            <div className="absolute inset-0 bg-linear-to-br from-violet-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 rounded-2xl transition-opacity duration-500 pointer-events-none"></div>
+
+                            {/* Avatar */}
+                            <div className="relative mb-4">
+                                {proj.avatarUrl ? (
+                                    <img src={proj.avatarUrl} alt={proj.name} className="w-16 h-16 rounded-2xl ring-4 ring-zinc-950/80 object-cover relative z-10 shadow-lg group-hover:scale-105 transition-transform duration-300" />
+                                ) : (
+                                    <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-zinc-800 to-zinc-900 border border-zinc-700 flex items-center justify-center text-2xl font-bold text-white shadow-lg ring-4 ring-zinc-950/80 relative z-10 group-hover:scale-105 transition-transform duration-300">
+                                        {proj.name[0]}
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Descrição */}
-                            <p className="text-sm text-zinc-400 line-clamp-2 mb-4 leading-relaxed">
-                                {proj.description || 'Sem descrição'}
+                            <h3 className="text-lg font-bold text-zinc-100 group-hover:text-white transition-colors truncate w-full px-2">{proj.name}</h3>
+                            <p className="text-violet-400 text-[10px] font-bold uppercase tracking-wider mb-3">c/{proj.slug}</p>
+
+                            <p className="text-sm text-zinc-500 line-clamp-2 mb-4 h-10 w-full px-2 leading-tight">
+                                {proj.description || "Comunidade focada em desenvolvimento."}
                             </p>
 
                             {/* Tags */}
-                            {proj.tags && proj.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                    {proj.tags.slice(0, 3).map((tag: string) => (
-                                        <span 
-                                            key={tag} 
-                                            className="text-xs bg-violet-500/10 text-violet-400 px-2 py-1 rounded-md flex items-center gap-1"
-                                        >
-                                            <Hash size={10} />
-                                            {tag}
-                                        </span>
-                                    ))}
-                                    {proj.tags.length > 3 && (
-                                        <span className="text-xs text-zinc-500">
-                                            +{proj.tags.length - 3}
-                                        </span>
-                                    )}
+                            <div className="flex flex-wrap justify-center gap-1.5 mb-5 w-full min-h-6">
+                                {proj.tags && proj.tags.length > 0 ? (
+                                    proj.tags.slice(0, 3).map((tag: string) => (
+                                        <span key={tag} className="text-[10px] font-medium bg-zinc-800/80 text-zinc-400 border border-zinc-700/50 px-2 py-0.5 rounded-md hover:border-violet-500/30 hover:text-violet-300 transition-colors cursor-default">#{tag}</span>
+                                    ))
+                                ) : (
+                                    <span className="text-[10px] text-zinc-600 italic">Geral</span>
+                                )}
+                            </div>
+
+                            <div className="w-full h-px bg-zinc-800/50 mb-4"></div>
+
+                            <div className="w-full flex items-center justify-between">
+                                <div className="text-left flex flex-col">
+                                    <span className="text-sm font-bold text-white">{proj._count?.members || 0}</span>
+                                    <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-wide">Membros</span>
                                 </div>
-                            )}
+                                
+                                <Link to={`/projects/${proj.slug || proj.id}`}>
+                                    <button className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-bold shadow-lg shadow-white/5 hover:scale-105 transition-all active:scale-95 flex items-center gap-1">
+                                        Ver <ArrowRight size={12} />
+                                    </button>
+                                </Link>
+                            </div>
                         </div>
-                    </Link>
-                ))}
-            </div>
-        )}
+                    ))}
+                </div>
+            )}
+
+            {!loading && filteredProjects.length === 0 && (
+                <div className="text-center py-16 border border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20">
+                    <div className="inline-block p-3 bg-zinc-900 rounded-full mb-3"><Hash size={24} className="text-zinc-500" /></div>
+                    <h3 className="text-zinc-300 font-bold">Nenhum projeto encontrado</h3>
+                    <p className="text-sm text-zinc-500 mt-1">Tente buscar por outro termo ou tag.</p>
+                </div>
+            )}
+        </div>
       </div>
-
-      {/* WIDGETS LATERAIS - MESMA ESTRUTURA DO FEED */}
-      <aside className="hidden xl:block w-[320px] shrink-0 sticky top-24 h-fit space-y-6">
-          
-          {/* Widget: Criar Projeto */}
-          <div className="bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden shadow-sm p-5">
-            <h3 className="font-bold text-white mb-3 text-sm flex items-center gap-2 uppercase tracking-wider border-b border-zinc-800 pb-2">
-              ✨ Crie seu Projeto
-            </h3>
-            <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
-                Traga seu próprio projeto para o DevFlow e compartilhe conhecimento com outros devs!
-            </p>
-            <Link to="/projects/new">
-                <button className="w-full bg-violet-600 hover:bg-violet-700 text-white py-2 rounded-full text-sm font-bold transition-all shadow-lg shadow-violet-600/20">
-                    + Criar Projeto
-                </button>
-            </Link>
-          </div>
-
-          {/* Widget: Trending Topics */}
-          <div className="bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden shadow-sm p-5">
-            <h3 className="font-bold text-white mb-4 text-sm flex items-center gap-2 uppercase tracking-wider border-b border-zinc-800 pb-2">
-              <Hash size={16} className="text-orange-500"/> Tags Populares
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {['javascript', 'reactjs', 'nodejs', 'python', 'devops', 'ai'].map(tag => (
-                <span 
-                    key={tag} 
-                    className="px-3 py-1.5 bg-zinc-800/40 hover:bg-zinc-800/80 border border-zinc-700/40 rounded-lg text-xs text-zinc-300 hover:text-white cursor-pointer transition-colors backdrop-blur-sm"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          </div>
-      </aside>
     </AppShell>
   );
 }
