@@ -4,7 +4,7 @@ import { Input } from "../../ui/Input";
 import { Button } from "../../ui/Button"; 
 
 export interface FormDataLogin {
-  email: string;
+  login: string; 
   password: string;
   lembrarMe: boolean;
 }
@@ -17,7 +17,7 @@ interface LoginFormProps {
 
 export function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps) {
   const [formData, setFormData] = useState<FormDataLogin>({
-    email: "",
+    login: "", 
     password: "",
     lembrarMe: false,
   });
@@ -31,8 +31,13 @@ export function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.email.trim()) newErrors.email = "O email é obrigatório";
+    
+    if (!formData.login.trim()) {
+        newErrors.login = "Digite seu e-mail ou usuário";
+    }
+    
     if (!formData.password) newErrors.password = "A senha é obrigatória";
+    
     setFieldErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -45,7 +50,6 @@ export function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      {/* Mensagem de Erro */}
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-md text-center">
           {error}
@@ -55,15 +59,15 @@ export function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="space-y-1">
           <Input
-            label="Email"
-            type="email"
-            placeholder="seu@email.com"
-            value={formData.email}
-            onChange={(e) => updateField("email", e.target.value)}
+            label="E-mail ou Usuário" 
+            type="text" 
+            placeholder="seu@email.com ou username"
+            value={formData.login}
+            onChange={(e) => updateField("login", e.target.value)} 
             disabled={isLoading}
-            className={fieldErrors.email ? "border-red-500 focus:border-red-500" : ""}
+            className={fieldErrors.login ? "border-red-500 focus:border-red-500" : ""}
           />
-          {fieldErrors.email && <span className="text-xs text-red-400">{fieldErrors.email}</span>}
+          {fieldErrors.login && <span className="text-xs text-red-400">{fieldErrors.login}</span>}
         </div>
 
         <div className="space-y-1">

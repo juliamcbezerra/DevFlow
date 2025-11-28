@@ -17,7 +17,7 @@ export default function LoginPage() {
       
       // Conecta os dados do formulário com a função de login do contexto
       await signIn({ 
-        email: dados.email, 
+        login: dados.login, 
         password: dados.password 
       });
       

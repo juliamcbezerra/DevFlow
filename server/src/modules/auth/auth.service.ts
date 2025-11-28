@@ -57,8 +57,13 @@ export class AuthService {
   // --- LOGIN ---
   async signIn(dto: LoginSessionDto, res: Response) {
     // 1. Buscar usuário
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: dto.login },
+          { username: dto.login },
+        ],
+      },
     });
 
     if (!user) throw new UnauthorizedException('Credenciais inválidas');

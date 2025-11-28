@@ -66,12 +66,12 @@ export class SessionDto {
 
 export class LoginSessionDto {
   @ApiProperty({
-    description: 'Email cadastrado',
-    example: 'lucas@devflow.com',
+    description: 'Email ou Nome de usuário',
+    example: 'lucas@devflow.com ou lucas_dev',
   })
   @IsEmail()
   @IsNotEmpty()
-  email: string;
+  login: string;
 
   @ApiProperty({
     description: 'Senha do usuário',
