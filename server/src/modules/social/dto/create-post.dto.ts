@@ -1,44 +1,31 @@
-// server/src/modules/social/dto/create-post.dto.ts
-import { IsBoolean, IsEnum, IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { PostType } from '@prisma/client'; 
 import { ApiProperty } from '@nestjs/swagger'; 
 
 export class CreatePostDto {
   @ApiProperty({
-    description: 'O título do post',
-    example: 'Como centralizar uma div com CSS?',
+    description: 'Título do post (Opcional - estilo Twitter/Bluesky)',
+    example: 'Dúvida sobre React',
+    required: false,
   })
   @IsString()
-  @IsNotEmpty()
-  title: string;
+  @IsOptional()
+  title?: string;
 
   @ApiProperty({
-    description: 'O corpo do post em formato JSON. A estrutura depende do tipo.',
-    example: { 
-      text: 'Alguém sabe se flexbox é melhor que grid para isso?',
-      language: 'css' // Exemplo de campo extra se fosse código
-    },
+    description: 'O conteúdo do post',
+    example: 'Alguém sabe como centralizar uma div?',
   })
-  @IsObject()
   @IsNotEmpty()
-  content: Record<string, any>; 
+  content: any; // Aceita string ou objeto (flexibilidade para o frontend)
 
   @ApiProperty({
-    description: 'O tipo do post (Define como o front renderiza)',
-    enum: PostType, // Isso cria um dropdown automático no Swagger!
+    description: 'Tipo visual do post',
+    enum: PostType,
     example: 'TEXT',
-    required: false, // Mostra que é opcional na doc
+    required: false, 
   })
   @IsEnum(PostType)
   @IsOptional()
   type?: PostType; 
-
-  @ApiProperty({
-    description: 'Define se é o Post de Abertura do Projeto (Pitch)',
-    example: false,
-    required: false,
-  })
-  @IsBoolean()
-  @IsOptional()
-  isPAP?: boolean;
 }
