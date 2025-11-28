@@ -6,6 +6,7 @@ import {
   MinLength,
   IsOptional,
   IsDateString, 
+  IsBoolean,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger'; 
 
@@ -81,4 +82,9 @@ export class LoginSessionDto {
   @IsNotEmpty()
   @MinLength(8, { message: 'A senha possui pelo menos 8 caracteres' })
   password: string;
+
+  @ApiProperty({ description: 'Manter conectado por 30 dias', required: false })
+  @IsOptional()
+  @IsBoolean()
+  rememberMe?: boolean;
 }

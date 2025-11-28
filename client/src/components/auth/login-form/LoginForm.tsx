@@ -6,7 +6,7 @@ import { Button } from "../../ui/Button";
 export interface FormDataLogin {
   login: string; 
   password: string;
-  lembrarMe: boolean;
+  rememberMe: boolean;
 }
 
 interface LoginFormProps {
@@ -19,7 +19,7 @@ export function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps
   const [formData, setFormData] = useState<FormDataLogin>({
     login: "", 
     password: "",
-    lembrarMe: false,
+    rememberMe: false,
   });
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -87,8 +87,8 @@ export function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps
           <label className="flex items-center gap-2 cursor-pointer group">
             <input
               type="checkbox"
-              checked={formData.lembrarMe}
-              onChange={(e) => updateField("lembrarMe", e.target.checked)}
+              checked={formData.rememberMe}
+              onChange={(e) => updateField("rememberMe", e.target.checked)}
               disabled={isLoading}
               className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-violet-600 focus:ring-violet-600 accent-violet-600"
             />

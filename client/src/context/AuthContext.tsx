@@ -35,7 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signIn(credentials: any) {
     const response = await api.post('/auth/signin', {
       login: credentials.login,
-      password: credentials.password
+      password: credentials.password,
+      rememberMe: credentials.rememberMe,
     });
     
     // O backend retorna { user: { ... } }

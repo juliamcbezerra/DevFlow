@@ -81,8 +81,14 @@ export class AuthService {
     // 
     
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 1);
 
+    if (dto.rememberMe) {
+      // 30 dias
+      expiresAt.setDate(expiresAt.getDate() + 30);
+    } else {
+      expiresAt.setDate(expiresAt.getDate() + 1);
+    }
+    
     await this.prisma.session.create({
       data: {
         sessionToken: token,
