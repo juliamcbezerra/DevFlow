@@ -69,7 +69,7 @@ export class LoginSessionDto {
     description: 'Email ou Nome de usuário',
     example: 'lucas@devflow.com ou lucas_dev',
   })
-  @IsEmail()
+  @IsString()
   @IsNotEmpty()
   login: string;
 
