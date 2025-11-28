@@ -25,7 +25,7 @@ export default function SignupPage() {
       });
 
       // Login automático após cadastro
-      await signIn({ email: dados.email, password: dados.password });
+      await signIn({ login: dados.email, password: dados.password });
       navigate('/feed');
 
     } catch (err: any) {
