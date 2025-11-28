@@ -18,15 +18,19 @@ export default function SignupPage() {
 
       await api.post('/auth/signup', {
         name: dados.nome + ' ' + dados.sobrenome,
+        username: dados.username, 
         email: dados.email,
         password: dados.password,
+        birthDate: dados.birthDate
       });
 
+      // Login automático após cadastro
       await signIn({ email: dados.email, password: dados.password });
       navigate('/feed');
 
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Erro ao criar conta.';
+      // Backend costuma devolver array de erros
       setError(Array.isArray(msg) ? msg[0] : msg);
     } finally {
       setLoading(false);
@@ -36,7 +40,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-zinc-950">
       
-      {/* --- COLUNA ESQUERDA: FORMULÁRIO (Antítese ao Login) --- */}
+      {/* --- COLUNA ESQUERDA: FORMULÁRIO --- */}
       <div className="flex flex-col items-center justify-center p-8 sm:p-24 order-1 bg-zinc-950">
         <div className="w-full max-w-md space-y-8">
           
@@ -59,7 +63,7 @@ export default function SignupPage() {
         </div>
       </div>
 
-      {/* --- COLUNA DIREITA: VISUAL RICO (O Preenchimento) --- */}
+      {/* --- COLUNA DIREITA: VISUAL RICO (Card de Código) --- */}
       <div className="hidden lg:flex flex-col items-center justify-center relative bg-zinc-900 overflow-hidden order-2 border-l border-zinc-800">
         
         {/* 1. Background Noise & Gradient */}
@@ -67,7 +71,7 @@ export default function SignupPage() {
         <div className="absolute top-[-20%] right-[-20%] w-[600px] h-[600px] bg-violet-600/20 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-[-20%] left-[-20%] w-[600px] h-[600px] bg-orange-600/20 rounded-full blur-[120px]"></div>
 
-        {/* 2. O CONTEÚDO CENTRAL (Preenchendo o Vazio) */}
+        {/* 2. O CONTEÚDO CENTRAL */}
         <div className="relative z-10 w-full max-w-lg px-8 flex flex-col gap-8">
           
           {/* Texto de Impacto */}
@@ -85,13 +89,13 @@ export default function SignupPage() {
             </h1>
           </div>
 
-          {/* 3. O "CARD DE CÓDIGO" FLUTUANTE (O Visual Hero) */}
-          <div className="relative group">
+          {/* 3. O "CARD DE CÓDIGO" FLUTUANTE (Glassmorphism) */}
+          <div className="relative group perspective-1000">
             {/* Efeito de brilho atrás do card */}
             <div className="absolute -inset-1 bg-linear-to-r from-violet-600 to-orange-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
             
-            {/* O Card em si (Simulando um editor de código) */}
-            <div className="relative bg-zinc-900 ring-1 ring-zinc-700 rounded-xl shadow-2xl overflow-hidden transform rotate-2 hover:rotate-0 transition-all duration-500 ease-out">
+            {/* O Card em si */}
+            <div className="relative bg-zinc-900/90 backdrop-blur-xl ring-1 ring-zinc-700/50 rounded-xl shadow-2xl overflow-hidden transform rotate-2 hover:rotate-0 transition-all duration-500 ease-out">
               
               {/* Barra de título do editor */}
               <div className="flex items-center px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
@@ -103,8 +107,8 @@ export default function SignupPage() {
                 <div className="ml-4 text-xs text-zinc-500 font-mono">DevFlow.tsx</div>
               </div>
 
-              {/* Conteúdo do Código (Syntax Highlight Fake) */}
-              <div className="p-6 font-mono text-sm text-zinc-300 space-y-2 leading-relaxed bg-zinc-950/80">
+              {/* Conteúdo do Código */}
+              <div className="p-6 font-mono text-sm text-zinc-300 space-y-2 leading-relaxed bg-zinc-950/50">
                 <div className="flex">
                   <span className="text-zinc-600 w-6 select-none">1</span>
                   <span><span className="text-violet-400">interface</span> <span className="text-yellow-300">Developer</span> {'{'}</span>

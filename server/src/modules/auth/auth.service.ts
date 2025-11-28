@@ -47,6 +47,7 @@ export class AuthService {
         name: dto.name,
         password: hashedPassword,
         username: finalUsername, 
+        birthDate: new Date(dto.birthDate),
       },
     });
 

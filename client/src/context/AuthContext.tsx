@@ -5,13 +5,15 @@ interface User {
   id: string;
   email: string;
   name: string;
+  username: string;
+  avatarUrl?: string;
 }
 
 interface AuthContextData {
   user: User | null;
   isAuthenticated: boolean;
-  signIn: (data: any) => Promise<void>; 
-  signUp: (data: any) => Promise<void>; 
+  signIn: (data: any) => Promise<void>;
+  signUp: (data: any) => Promise<void>;
   signOut: () => void;
   loading: boolean;
 }
@@ -32,13 +34,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signIn(credentials: any) {
     const response = await api.post('/auth/signin', {
-      email: credentials.email,    
-      password: credentials.password 
+      email: credentials.email,
+      password: credentials.password
     });
     
-    const userData = response.data; 
-    setUser(userData);
-    localStorage.setItem('@DevFlow:user', JSON.stringify(userData));
+    // O backend retorna { user: { ... } }
+    const { user } = response.data;
+
+    setUser(user);
+    localStorage.setItem('@DevFlow:user', JSON.stringify(user));
   }
 
   async function signUp(credentials: any) {
@@ -48,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function signOut() {
     setUser(null);
     localStorage.removeItem('@DevFlow:user');
+    window.location.href = '/login';
   }
 
   return (

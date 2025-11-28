@@ -6,6 +6,7 @@ import { LoginForm, FormDataLogin } from '../components/auth/login-form/LoginFor
 export default function LoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -14,13 +15,25 @@ export default function LoginPage() {
       setError('');
       setLoading(true);
       
-      // Enviamos o objeto padronizado com { email, password }
-      await signIn({ email: dados.email, password: dados.password });
+      // Conecta os dados do formulário com a função de login do contexto
+      await signIn({ 
+        email: dados.email, 
+        password: dados.password 
+      });
       
+      // Se passar pelo await sem erro, redireciona
       navigate('/feed');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('Falha no login. Verifique suas credenciais.');
+      
+      // Tenta pegar a mensagem de erro específica do Backend (NestJS), 
+      // caso contrário usa uma genérica.
+      const backendMessage = err.response?.data?.message;
+      const displayMessage = Array.isArray(backendMessage) 
+        ? backendMessage[0] 
+        : backendMessage || 'Falha no login. Verifique suas credenciais.';
+        
+      setError(displayMessage);
     } finally {
       setLoading(false);
     }

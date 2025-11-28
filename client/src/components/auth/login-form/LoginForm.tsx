@@ -33,7 +33,6 @@ export function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps
     const newErrors: Record<string, string> = {};
     if (!formData.email.trim()) newErrors.email = "O email é obrigatório";
     if (!formData.password) newErrors.password = "A senha é obrigatória";
-    // Removida a trava de 8 chars no login para não bloquear usuários antigos
     setFieldErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -46,7 +45,7 @@ export function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      {/* Mensagem de Erro vinda do Backend */}
+      {/* Mensagem de Erro */}
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-md text-center">
           {error}
@@ -99,9 +98,8 @@ export function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps
           </Link>
         </div>
 
-        {/* AQUI ESTAVA O PROBLEMA: Agora usamos children */}
         <div className="mt-4">
-          <Button type="submit" isLoading={isLoading}>
+          <Button type="submit" isLoading={isLoading} className="w-full">
             Entrar
           </Button>
         </div>

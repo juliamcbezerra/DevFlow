@@ -21,8 +21,7 @@ export class SocialService {
         title: dto.title,
         content: dto.content, // O Prisma converte o objeto JS para JSON automaticamente
         type: dto.type,
-        isPAP: dto.isPAP || false,
-        
+
         // Conexões (Foreign Keys)
         author: {
           connect: { id: userId },
@@ -43,7 +42,6 @@ export class SocialService {
       },
       // Ordenação: Posts mais recentes primeiro (topo da lista)
       orderBy: [
-        { isPAP: 'desc' }, // O PAP aparece sempre primeiro (true > false)
         { createdAt: 'desc' } // Depois, os mais novos
       ],
       // Join: Traz os dados do Autor junto com o Post
