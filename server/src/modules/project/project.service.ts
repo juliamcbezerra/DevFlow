@@ -1,5 +1,4 @@
-// server/src/modules/project/project.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 
@@ -7,124 +6,113 @@ import { CreateProjectDto } from './dto/create-project.dto';
 export class ProjectService {
   constructor(private prisma: PrismaService) {}
 
-  async createProject(dto: CreateProjectDto, userId: string) {
-    // 1. Cria o projeto no banco
-    const newProject = await this.prisma.project.create({
+  // --- 1. CRIAR ---
+  async create(userId: string, dto: CreateProjectDto) {
+    const slug = dto.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString().slice(-4);
+
+    return this.prisma.project.create({
       data: {
         name: dto.name,
         description: dto.description,
-        
-        // 2. Conecta o projeto ao seu dono (owner)
-        owner: {
-          connect: {
-            id: userId,
-          },
-        },
-      },
-    }); 
-
-    return newProject;
-  }
-
-  async findMyProjects(userId: string) {
-    // Encontra todos os projetos onde o ownerId é o ID do utilizador
-    return this.prisma.project.findMany({
-      where: {
+        slug: slug,
+        tags: dto.tags || [],
         ownerId: userId,
-      },
-      orderBy: {
-        createdAt: 'desc', 
+        members: {
+          create: { userId: userId, role: 'OWNER' }
+        }
       },
     });
   }
 
-  async followProject(userId: string, projectId: string) {
-    // 1. Verifica se o projeto existe
+  // --- 2. LISTAR (SMART FEED) ---
+  async findAllSmart(userId: string, type: 'foryou' | 'following') {
+    // Busca o usuário e seus projetos
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        // Tenta buscar projetos onde sou membro. 
+        // Se der erro aqui, é pq o nome da relação no Schema User é diferente de 'members'
+        members: true, 
+      }
+    });
+
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    let whereClause: any = {};
+
+    // A. SEGUINDO (Projetos que sou membro)
+    if (type === 'following') {
+      const myProjectIds = user.members.map(m => m.projectId);
+      whereClause = { id: { in: myProjectIds } };
+    }
+
+    // B. BUSCAR PROJETOS
+    const projects = await this.prisma.project.findMany({
+      where: whereClause,
+      include: {
+        _count: { select: { members: true, posts: true } }
+      },
+      take: 50
+    });
+
+    // C. PARA VOCÊ (Ordenação)
+    if (type === 'foryou') {
+      return projects.map(proj => {
+        let score = proj._count.members;
+        // Bônus por tags
+        if (proj.tags && user.interestTags) {
+          const matches = proj.tags.filter(t => user.interestTags.includes(t)).length;
+          score += (matches * 50); 
+        }
+        return { ...proj, sortScore: score };
+      }).sort((a, b) => b.sortScore - a.sortScore);
+    }
+
+    return projects;
+  }
+
+  // --- 3. DETALHES ---
+  async findOne(id: string, userId: string) {
     const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-      select: { id: true }, // sem isPrivate porque não existe no schema
+      where: { id },
+      include: {
+        owner: { select: { id: true, name: true, avatarUrl: true } },
+        _count: { select: { members: true, posts: true } },
+        members: { where: { userId: userId }, take: 1 }
+      }
     });
 
-    if (!project) {
-      throw new NotFoundException('Projeto não encontrado');
-    }
-
-    // 2. Verifica se o usuário já segue o projeto
-    const alreadyFollowing = await this.prisma.followProject.findUnique({
-      where: {
-        userId_projectId: { userId, projectId },
-      },
-    });
-
-    if (alreadyFollowing) {
-      return {
-        status: 'ok',
-        message: 'Você já segue este projeto',
-      };
-    }
-
-    // 3. Cria o follow
-    await this.prisma.followProject.create({
-      data: { userId, projectId },
-    });
+    if (!project) throw new NotFoundException('Projeto não encontrado');
 
     return {
-      status: 'ok',
-      message: 'Agora você está seguindo este projeto!',
+      ...project,
+      isMember: project.members.length > 0
     };
   }
 
-  async unfollowProject(userId: string, projectId: string) {
-  // 1. Verifica se o projeto existe
-  const project = await this.prisma.project.findUnique({
-    where: { id: projectId },
-    select: { id: true },
-  });
+  // --- 4. JOIN / LEAVE (Substitui Follow/Unfollow) ---
+  async joinProject(projectId: string, userId: string) {
+    const existing = await this.prisma.member.findUnique({
+       where: { userId_projectId: { userId, projectId } }
+    });
 
-  if (!project) {
-    throw new NotFoundException('Projeto não encontrado');
+    if (existing) return { message: 'Já é membro' };
+
+    await this.prisma.member.create({
+      data: { userId, projectId, role: 'MEMBER' }
+    });
+    return { message: 'Entrou com sucesso' };
   }
 
-  // 2. Verifica se o usuário segue o projeto
-  const follow = await this.prisma.followProject.findUnique({
-    where: {
-      userId_projectId: { userId, projectId },
-    },
-  });
+  async leaveProject(projectId: string, userId: string) {
+    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    if (project && project.ownerId === userId) {
+        throw new ConflictException('Dono não pode sair.');
+    }
 
-  if (!follow) {
-    return {
-      status: 'ok',
-      message: 'Você não está seguindo este projeto',
-    };
+    await this.prisma.member.delete({
+       where: { userId_projectId: { userId, projectId } }
+    });
+    return { message: 'Saiu com sucesso' };
   }
-
-  // 3. Deixa de seguir (remove do banco)
-  await this.prisma.followProject.delete({
-    where: {
-      userId_projectId: { userId, projectId },
-    },
-  });
-
-  return {
-    status: 'ok',
-    message: 'Você deixou de seguir este projeto.',
-  };
-}
-
-async getPopularTags() {
-  const rows = await this.prisma.$queryRaw<{ tag: string; count: number }[]>`
-    SELECT tag, COUNT(*) AS count
-    FROM (
-      SELECT UNNEST("tags") AS tag
-      FROM "Project"
-      WHERE "isPublic" = true
-    ) t
-    GROUP BY tag
-    ORDER BY count DESC
-    LIMIT 20
-  `;
-  return rows;
-}
-  
 }

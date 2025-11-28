@@ -1,80 +1,45 @@
-// server/src/modules/project/project.controller.ts
-import {
-  Controller,
-  Post,
-  Body,
-  UseGuards,
-  Req,
-  ValidationPipe,
-  Get,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Req, Query, ValidationPipe } from '@nestjs/common';
+import { JwtGuard } from '../jwt/jwt.guard';
 import { ProjectService } from './project.service';
 import { CreateProjectDto } from './dto/create-project.dto';
-import { JwtGuard } from '../jwt/jwt.guard'; 
 
-@Controller('projects') 
+@UseGuards(JwtGuard)
+@Controller('projects')
 export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}
 
-  @UseGuards(JwtGuard) 
+  // 1. CRIAR PROJETO
   @Post()
-  async createProject(
-    @Body(ValidationPipe) dto: CreateProjectDto,
-    @Req() req: any, 
-  ) {
-
-    const userId = req.user.id;
-
-    if (!userId) {
-      throw new Error('ID do utilizador não encontrado no token.');
-    }
-    
-    return this.projectService.createProject(dto, userId);
+  async create(@Body(ValidationPipe) dto: CreateProjectDto, @Req() req: any) {
+    // Chama 'create', não 'createProject'
+    return this.projectService.create(req.user.id, dto);
   }
 
-  @UseGuards(JwtGuard) 
-  @Get() 
-  async findMyProjects(@Req() req: any) { 
-    const userId = req.user.id;
-
-    if (!userId) {
-      throw new Error('ID do utilizador não encontrado no token.');
-    }
-
-    return this.projectService.findMyProjects(userId);
+  // 2. LISTAR (SMART FEED)
+  @Get()
+  async findAll(@Req() req: any, @Query('type') type: string) {
+    const feedType = type === 'following' ? 'following' : 'foryou';
+    // Chama 'findAllSmart', não 'findMyProjects'
+    return this.projectService.findAllSmart(req.user.id, feedType);
   }
 
-  @UseGuards(JwtGuard)
-  @Post(':projectId/follow')
-  async followProject(
-    @Param('projectId') projectId: string,
-    @Req() req,
-  ) {
-    const userId = req.user.id;
-    return this.projectService.followProject(userId, projectId);
+  // 3. DETALHES
+  @Get(':id')
+  async findOne(@Param('id') id: string, @Req() req: any) {
+    return this.projectService.findOne(id, req.user.id);
   }
 
-  @UseGuards(JwtGuard)
-  @Delete(':projectId/unfollow')
-async unfollowProject(
-  @Param('projectId') projectId: string,
-  @Req() req,
-) {
-  const userId = req.user.id;
-  return this.projectService.unfollowProject(userId, projectId);
-}
+  // 4. JOIN
+  @Post(':id/join')
+  async join(@Param('id') id: string, @Req() req: any) {
+    // Chama 'joinProject', não 'followProject'
+    return this.projectService.joinProject(id, req.user.id);
+  }
 
-}
-
-@UseGuards(JwtGuard)
-@Controller('tags')
-export class TagsController {
-  constructor(private readonly projectService: ProjectService) {}
-
-  @Get('popular')
-  async popular() {
-    return this.projectService.getPopularTags();
+  // 5. LEAVE
+  @Delete(':id/leave')
+  async leave(@Param('id') id: string, @Req() req: any) {
+    // Chama 'leaveProject', não 'unfollowProject'
+    return this.projectService.leaveProject(id, req.user.id);
   }
 }

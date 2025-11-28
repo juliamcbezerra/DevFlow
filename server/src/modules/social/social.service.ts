@@ -1,4 +1,3 @@
-// server/src/modules/social/social.service.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -11,149 +10,201 @@ import { CommentTreeDTO } from './dto/comment-tree.dto';
 export class SocialService {
   constructor(private prisma: PrismaService) {}
 
-  //Criar um novo Post
-  async createPost(dto: CreatePostDto, userId: string, projectId: string) {
-    // Se for um PAP, verificamos se já existe um (opcional, regra de negócio)
-    // Por agora, vamos apenas criar.
+  // --- 1. CRIAR POST ---
+  async createPost(dto: CreatePostDto, userId: string, projectId?: string) {
+    const data: any = {
+      title: dto.title,
+      content: dto.content,
+      type: dto.type || 'TEXT',
+      author: { connect: { id: userId } },
+    };
+
+    if (projectId) {
+      data.project = { connect: { id: projectId } };
+    }
 
     return this.prisma.post.create({
-      data: {
-        title: dto.title,
-        content: dto.content, // O Prisma converte o objeto JS para JSON automaticamente
-        type: dto.type,
-
-        // Conexões (Foreign Keys)
+      data,
+      include: {
         author: {
-          connect: { id: userId },
-        },
-        project: {
-          connect: { id: projectId },
-        },
-      },
+          select: { id: true, name: true, username: true, avatarUrl: true }
+        }
+      }
     });
   }
 
-  //Buscar o Feed do Projeto
+  // --- 2. FEED INTELIGENTE (Para Você / Seguindo) ---
+  async findAllSmart(userId: string, type: 'foryou' | 'following') {
+    
+    // 1. Pegar dados do usuário atual (tags e quem ele segue)
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        following: true,        // Pessoas que ele segue (Tabela Follows)
+        followedProjects: true  // Projetos que ele segue (Tabela FollowProject)
+      }
+    });
+
+    if (!user) throw new Error('Usuário não encontrado');
+
+    let whereClause: any = { deletedAt: null };
+
+    // --- LÓGICA "SEGUINDO" ---
+    if (type === 'following') {
+      const followingIds = user.following.map(f => f.followingId);
+      const projectIds = user.followedProjects.map(p => p.projectId);
+      
+      whereClause = {
+        deletedAt: null,
+        OR: [
+          { authorId: { in: followingIds } }, // Posts de quem eu sigo
+          { projectId: { in: projectIds } }   // Posts de projetos que eu sigo
+        ]
+      };
+    }
+
+    // --- BUSCA DOS POSTS ---
+    const posts = await this.prisma.post.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' }, // Padrão: mais recentes primeiro
+      take: 50, // Paginação inicial
+      include: {
+        author: { select: { id: true, name: true, username: true, avatarUrl: true } },
+        project: { select: { id: true, name: true, tags: true } }, // Traz tags do projeto para o algoritmo
+        votes: { select: { value: true } },
+        _count: { select: { comments: true } }
+      }
+    });
+
+    // --- ALGORITMO DE RELEVÂNCIA ---
+    const mappedPosts = posts.map(post => {
+      // 1. Calcula Score Real (Soma dos Votos)
+      let score = post.votes.reduce((acc, curr) => acc + curr.value, 0);
+      
+      // 2. Cálculo de Peso para ordenação (SortScore)
+      // O SortScore começa igual ao Score de votos
+      let sortScore = score;
+
+      // Se for "Para Você", aplicamos o algoritmo de recomendação
+      if (type === 'foryou' && post.project && post.project.tags) {
+         // Quantas tags do projeto batem com as tags do usuário?
+         const matches = post.project.tags.filter(tag => user.interestTags.includes(tag)).length;
+         
+         // BÔNUS: Cada tag em comum vale +5 pontos na ordenação (mas não muda o número visual de votos)
+         if (matches > 0) {
+            sortScore += (matches * 5); 
+         }
+      }
+
+      const { votes, ...rest } = post;
+      
+      return { 
+        ...rest, 
+        _count: { comments: post._count.comments, votes: score }, // Para o Front exibir
+        sortScore // Apenas para ordenar aqui no Back
+      };
+    });
+
+    // Se for 'foryou', reordenamos baseado na relevância calculada
+    if (type === 'foryou') {
+      return mappedPosts.sort((a, b) => b.sortScore - a.sortScore);
+    }
+
+    // Se for 'following', mantém ordem cronológica
+    return mappedPosts;
+  }
+
+  // --- 3. FEED DO PROJETO (Mantido) ---
   async findAllByProject(projectId: string) {
-    return this.prisma.post.findMany({
+    const posts = await this.prisma.post.findMany({
       where: {
         projectId: projectId,
-        deletedAt: null, // Filtra pelo projeto atual
+        deletedAt: null,
       },
-      // Ordenação: Posts mais recentes primeiro (topo da lista)
-      orderBy: [
-        { createdAt: 'desc' } // Depois, os mais novos
-      ],
-      // Join: Traz os dados do Autor junto com o Post
+      orderBy: { createdAt: 'desc' },
       include: {
         author: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            // Não trazemos a senha! Segurança em primeiro lugar.
-          },
+          select: { id: true, name: true, username: true, avatarUrl: true },
         },
+        votes: { select: { value: true } },
         _count: {
-          select: { 
-            comments: true, // Traz a contagem de comentários
-            votes: true     // Traz a contagem de votos
-          } 
+          select: { comments: true } 
         }
       },
     });
+
+    // Também precisamos calcular o score aqui para não quebrar a UI
+    return posts.map(post => {
+        const score = post.votes.reduce((acc, curr) => acc + curr.value, 0);
+        const { votes, ...rest } = post;
+        return { ...rest, _count: { comments: post._count.comments, votes: score } };
+    });
   }
 
-  //Lógica de Toggle Vote (Upvote/Downvote)
+  // --- 4. TOGGLE VOTE ---
   async toggleVote(userId: string, postId: string, dto: VoteDto) {
-    // 1. Verificar se já existe um voto deste user neste post
     const existingVote = await this.prisma.vote.findUnique({
-      where: {
-        userId_postId: { // Chave composta definida no schema
-          userId,
-          postId,
-        },
-      },
+      where: { userId_postId: { userId, postId } },
     });
 
-    // 2. Cenário A: Já votou?
     if (existingVote) {
-      // Se votou igual (ex: clicou Upvote num post já Upvoted), removemos (Toggle Off)
       if (existingVote.value === dto.value) {
-        return this.prisma.vote.delete({
-          where: { id: existingVote.id },
-        });
+        return this.prisma.vote.delete({ where: { id: existingVote.id } });
       }
-
-      // Se votou diferente (ex: mudou de Upvote para Downvote), atualizamos
       return this.prisma.vote.update({
         where: { id: existingVote.id },
         data: { value: dto.value },
       });
     }
 
-    // 3. Cenário B: Nunca votou? Criar novo voto.
     return this.prisma.vote.create({
-      data: {
-        value: dto.value,
-        userId,
-        postId,
-      },
+      data: { value: dto.value, userId, postId },
     });
   }
 
-  //Criar Comentário
+  // --- 5. COMENTÁRIOS ---
   async createComment(userId: string, postId: string, dto: CreateCommentDto) {
     return this.prisma.comment.create({
       data: {
         content: dto.content,
         postId,
         authorId: userId,
-        // Futuro: parentId: dto.parentId
       },
       include: {
-        author: { select: { name: true, id: true } } // Retorna logo o autor para a UI atualizar
+        author: { select: { id: true, name: true, username: true, avatarUrl: true } }
       }
     });
   }
 
-  //Listar Comentários de um Post
   async findCommentsByPost(postId: string) {
     return this.prisma.comment.findMany({
       where: { postId },
       orderBy: { createdAt: 'asc' },
       include: {
-        author: {
-          select: { id: true, name: true }
-        }
+        author: { select: { id: true, name: true, username: true, avatarUrl: true } }
       }
     });
   }
 
   private buildCommentTree(comments: any[]): CommentTreeDTO[] {
-    // Map com array de filhos por parentId
     const childrenMap = new Map<string | null, any[]>();
 
     for (const comment of comments) {
       const parentId = comment.parentId ?? null;
-
-      if (!childrenMap.has(parentId)) {
-        childrenMap.set(parentId, []);
-      }
-
+      if (!childrenMap.has(parentId)) childrenMap.set(parentId, []);
       childrenMap.get(parentId)!.push(comment);
     }
 
     const buildBranch = (parentId: string | null): CommentTreeDTO[] => {
       const nodes = (childrenMap.get(parentId) ?? []) as any[];
-
       return nodes.map((comment) => ({
         id: comment.id,
         content: comment.content,
         createdAt: comment.createdAt,
         author: {
           id: comment.author.id,
-          name: comment.author.name
+          name: comment.author.name,
+          avatarUrl: comment.author.avatarUrl 
         },
         replies: buildBranch(comment.id)
       }));
@@ -162,65 +213,42 @@ export class SocialService {
     return buildBranch(null);
   }
 
-
   async getCommentsTree(postId: string) {
     const comments = await this.findCommentsByPost(postId);
     return this.buildCommentTree(comments);
   }
 
-
-  //Buscar um Post específico pelo ID
+  // --- 6. UTILITÁRIOS ---
   async findPostById(postId: string) {
-    const post = await this.prisma.post.findUnique({
+    return this.prisma.post.findUnique({
       where: { id: postId },
       include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        _count: {
-          select: {
-            comments: true,
-            votes: true,
-          },
-        },
+        author: { select: { id: true, name: true, username: true, avatarUrl: true } },
+        votes: { select: { value: true } },
+        _count: { select: { comments: true } },
       },
     });
-
-    return post;
   }
 
-async updatePost(userId: string, postId: string, dto: UpdatePostDto) {
-    // Primeiro: Verifica se o post existe e pertence ao user
+  async updatePost(userId: string, postId: string, dto: UpdatePostDto) {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
-
-    if (!post) throw new Error('Post não encontrado'); // O Controller vai tratar erros melhor depois
-    if (post.authorId !== userId) throw new Error('Você não tem permissão para editar este post');
+    if (!post) throw new Error('Post não encontrado');
+    if (post.authorId !== userId) throw new Error('Sem permissão');
 
     return this.prisma.post.update({
       where: { id: postId },
-      data: {
-        title: dto.title,
-        content: dto.content,
-        // Não permitimos mudar o type ou isPAP por segurança de negócio
-      },
+      data: { title: dto.title, content: dto.content },
     });
   }
 
   async removePost(userId: string, postId: string) {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
-
     if (!post) throw new Error('Post não encontrado');
-    
-    // Regra: Só o Autor OU o Dono do Projeto podem apagar (Futuro: Implementar check de dono do projeto)
-    if (post.authorId !== userId) throw new Error('Você não tem permissão para apagar este post');
+    if (post.authorId !== userId) throw new Error('Sem permissão');
 
     return this.prisma.post.update({
       where: { id: postId },
-      data: { deletedAt: new Date() }, // Marca a hora da deleção
+      data: { deletedAt: new Date() },
     });
   }
 }

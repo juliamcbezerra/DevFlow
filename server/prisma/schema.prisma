@@ -29,7 +29,7 @@ model User {
   id           String   @id @default(uuid())
   email        String   @unique
   name         String
-  username     String  @unique // Importante para URL de perfil
+  username     String   @unique // Importante para URL de perfil
   password     String
   avatarUrl    String?
   bio          String?
@@ -46,7 +46,10 @@ model User {
 
   // Comunidades (Usuário x Projeto)
   projectsOwned Project[] // Projetos que ele criou
-  memberships   Member[]  // Projetos que ele participa
+  
+  // --- CORREÇÃO AQUI: Mudamos de 'memberships' para 'members' para bater com o código ---
+  members       Member[]  // Projetos que ele participa
+  
   followedProjects FollowProject[] // Projetos que ele apenas segue (feed)
 
   // Conteúdo
@@ -109,8 +112,11 @@ model Member {
   role      Role     @default(MEMBER)
   joinedAt  DateTime @default(now())
 
+  // Relação User
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
+  
+  // Relação Project
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId String
 
@@ -144,8 +150,11 @@ model Post {
   // Relações
   author    User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId  String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId String
+  
+  // Projeto é opcional no banco para permitir flexibilidade futura,
+  // mas na regra de negócio atual será obrigatório.
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String?
 
   comments Comment[]
   votes    Vote[]

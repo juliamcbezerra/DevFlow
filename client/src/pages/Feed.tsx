@@ -1,130 +1,161 @@
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { Sidebar } from "../components/layout/Sidebar";
-import { useAuth } from "../context/AuthContext";
+import { usePosts } from "../hooks/usePosts";
+import { 
+    Terminal, MessageCircle, ArrowBigUp, ArrowBigDown, Share2, Hash, UserPlus
+} from "lucide-react";
+import api from "../services/api";
 
-// 1. ESTILO DOS POSTS (Com efeitos de hover, sombra e brilho)
 const postCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden hover:border-zinc-700/80 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-violet-900/5";
-
-// 2. ESTILO DA DIREITA (Estático - Sem sombra/brilho no hover para não bugar)
-const widgetCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden";
+const widgetCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden shadow-sm";
 
 export default function FeedPage() {
-  const { user } = useAuth();
-
-  const fakePosts = [
-    { id: 1, author: "Diego Fernandes", role: "CTO @ Rocketseat", time: "2h", content: "Acabei de migrar um projeto gigante de Create React App para Vite. A performance é absurda! 🚀", tags: ["react", "vite", "dx"], likes: 42, comments: 12 },
-    { id: 2, author: "Mayk Brito", role: "Educator", time: "5h", content: "Dica de CSS: usem gap no Flexbox.", code: ".box { display: flex; gap: 16px; }", tags: ["css"], likes: 128, comments: 34 },
-    { id: 3, author: "Dev Test", role: "Admin", time: "1d", content: "Testando o scroll infinito com sidebars fixas...", likes: 10, comments: 2 },
-    { id: 4, author: "User", role: "Member", time: "2d", content: "Mais um post para encher a tela...", likes: 5, comments: 0 },
-    { id: 5, author: "User 2", role: "Member", time: "3d", content: "Scroll invisível ativado!", likes: 15, comments: 3 },
-  ];
+  const [searchParams] = useSearchParams();
+  const activeTab = searchParams.get('type') || 'foryou';
   
-  const trendingTags = ["javascript", "reactjs", "nodejs", "career", "opensource"];
+  const [posts, setPosts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadFeed() {
+        setIsLoading(true);
+        try {
+            const { data } = await api.get(`/social/posts?type=${activeTab}`);
+            setPosts(data);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+    loadFeed();
+  }, [activeTab]);
+
+  const votePost = async (postId: string, value: number) => {
+     setPosts(prev => prev.map(p => p.id === postId ? {...p, _count: {...p._count, votes: p._count.votes + value}} : p));
+     await api.post('/social/vote', { postId, value });
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(dateString));
+    } catch (e) { return ""; }
+  };
 
   return (
     <AppShell>
-        
-        {/* 1. SIDEBAR ESQUERDA */}
-        <Sidebar />
+      <Sidebar />
 
-        {/* 2. FEED CENTRAL */}
-        <div className="flex-1 min-w-0 max-w-[800px] space-y-6 pb-20">
-          
-          {/* Criar Post */}
-          <div className={postCardClass + " p-4"}>
-            <div className="flex gap-4">
-              <img src={`https://ui-avatars.com/api/?name=${user?.name || 'Eu'}&background=random`} alt="Avatar" className="w-10 h-10 rounded-full ring-2 ring-zinc-800/50 shrink-0" />
-              <div className="flex-1">
-                <input 
-                  type="text" 
-                  placeholder="No que você está pensando?" 
-                  className="w-full bg-zinc-950/50 border border-zinc-800/80 text-zinc-200 rounded-xl px-4 py-3 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all placeholder-zinc-600 backdrop-blur-sm"
-                />
-                <div className="flex justify-between mt-3 items-center">
-                    <div className="flex gap-2 text-zinc-500">
-                        <button className="p-2 hover:text-violet-400 hover:bg-violet-500/10 rounded-lg transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></button>
-                        <button className="p-2 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg></button>
+      {/* COLUNA CENTRAL */}
+      {/* mt-6 adicionado para alinhar visualmente com o topo da sidebar sticky */}
+      <div className="flex-1 min-w-0 max-w-[800px] space-y-6 pb-20"> 
+        
+        {/* Lista de Posts */}
+        {isLoading ? (
+            <div className="space-y-4">
+                {[1,2,3].map(i => <div key={i} className="h-40 bg-zinc-900/40 rounded-2xl animate-pulse border border-zinc-800/50"></div>)}
+            </div>
+        ) : (
+            <div className="space-y-6">
+                {posts.map((post) => (
+                    <article key={post.id} className={postCardClass}>
+                      <div className="flex h-full">
+                          
+                          {/* COLUNA DE VOTOS */}
+                          <div className="w-12 bg-zinc-950/30 flex flex-col items-center py-3 border-r border-zinc-800/50 gap-1 shrink-0">
+                              <button onClick={() => votePost(post.id, 1)} className="text-zinc-500 hover:text-orange-500 p-1 transition-all active:scale-90">
+                                  <ArrowBigUp size={24} strokeWidth={2} />
+                              </button>
+                              <span className="font-bold text-sm text-zinc-200">{post._count?.votes || 0}</span>
+                              <button onClick={() => votePost(post.id, -1)} className="text-zinc-500 hover:text-violet-500 p-1 transition-all active:scale-90">
+                                  <ArrowBigDown size={24} strokeWidth={2} />
+                              </button>
+                          </div>
+
+                          {/* CONTEÚDO */}
+                          <div className="flex-1 p-4 sm:p-5">
+                              <div className="flex items-center gap-3 mb-3">
+                                  <img src={post.author.avatarUrl || `https://ui-avatars.com/api/?name=${post.author.name}&background=random`} className="w-6 h-6 rounded-full ring-1 ring-zinc-700 object-cover" />
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                      {post.project ? (
+                                          <span className="text-xs font-bold text-zinc-300 hover:underline cursor-pointer">p/{post.project.name}</span>
+                                      ) : (
+                                          <span className="text-xs font-bold text-zinc-500">Geral</span>
+                                      )}
+                                      <span className="text-zinc-600 text-[10px]">•</span>
+                                      <span className="text-xs text-zinc-500">@{post.author.username}</span>
+                                      <span className="text-zinc-600 text-[10px]">•</span>
+                                      <span className="text-xs text-zinc-600">{formatDate(post.createdAt)}</span>
+                                  </div>
+                              </div>
+                              
+                              <div className="text-zinc-200 mb-4 leading-relaxed whitespace-pre-wrap text-sm">{post.content}</div>
+                              
+                              <div className="flex gap-2 text-zinc-500 text-xs font-bold">
+                                  <button className="flex items-center gap-2 hover:bg-zinc-800 px-3 py-2 rounded-full transition-colors">
+                                      <MessageCircle size={16}/> <span>{post._count?.comments || 0} Comentários</span>
+                                  </button>
+                                  <button className="flex items-center gap-2 hover:bg-zinc-800 px-3 py-2 rounded-full transition-colors">
+                                      <Share2 size={16}/> <span>Compartilhar</span>
+                                  </button>
+                              </div>
+                          </div>
+                      </div>
+                    </article>
+                ))}
+
+                {posts.length === 0 && (
+                    <div className="text-center py-16 flex flex-col items-center">
+                        <div className="bg-zinc-900/80 p-4 rounded-full mb-4 ring-1 ring-zinc-800">
+                            <Terminal size={32} className="text-zinc-500" />
+                        </div>
+                        <h3 className="text-zinc-300 font-bold text-lg mb-1">O feed está silencioso...</h3>
+                        <p className="text-zinc-500 text-sm max-w-xs">
+                            {activeTab === 'following' ? "Você ainda não segue ninguém." : "Entre em comunidades para ver conteúdo!"}
+                        </p>
                     </div>
-                    <button className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-1.5 rounded-full font-bold text-sm transition-all shadow-lg shadow-violet-600/20">Publicar</button>
-                </div>
-              </div>
+                )}
+            </div>
+        )}
+      </div>
+
+      {/* --- WIDGETS LATERAIS --- */}
+      <aside className="hidden xl:block w-[320px] shrink-0 sticky top-24 h-fit space-y-6">
+          <div className={widgetCardClass + " p-5"}>
+            <h3 className="font-bold text-white mb-4 text-sm flex items-center gap-2 uppercase tracking-wider border-b border-zinc-800 pb-2">
+              <Hash size={16} className="text-orange-500"/> Trending Topics
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {['javascript', 'reactjs', 'nodejs', 'career', 'opensource', 'ai'].map(tag => (
+                <span key={tag} className="px-3 py-1.5 bg-zinc-800/40 hover:bg-zinc-800/80 border border-zinc-700/40 rounded-lg text-xs text-zinc-300 hover:text-white cursor-pointer transition-colors backdrop-blur-sm">
+                  #{tag}
+                </span>
+              ))}
             </div>
           </div>
 
-          {/* Posts */}
-          {fakePosts.map((post) => (
-            <article key={post.id} className={postCardClass}>
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <img src={`https://ui-avatars.com/api/?name=${post.author}&background=random`} alt={post.author} className="w-10 h-10 rounded-full ring-2 ring-zinc-800/50 group-hover:ring-violet-500/20 transition-all" />
-                  <div>
-                    <h3 className="text-sm font-bold text-zinc-100 hover:text-violet-400 cursor-pointer transition-colors">{post.author}</h3>
-                    <p className="text-xs text-zinc-400">{post.role} • {post.time}</p>
-                  </div>
-                </div>
-                <p className="text-zinc-200 mb-4 leading-relaxed">{post.content}</p>
-                {post.code && <div className="bg-zinc-950/80 p-4 rounded-xl font-mono text-sm text-zinc-300 mb-4 border border-zinc-800/80 custom-scrollbar overflow-x-auto"><pre>{post.code}</pre></div>}
-                
-                {post.tags && (
-                  <div className="flex gap-2 flex-wrap">
-                    {post.tags.map((tag: string) => (
-                      <span key={tag} className="text-xs font-medium text-violet-400/80 hover:text-violet-300 bg-violet-500/5 px-2 py-1 rounded-md cursor-pointer transition-colors">#{tag}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="px-6 py-3 bg-zinc-950/30 border-t border-zinc-800/50 flex items-center gap-6 text-zinc-400">
-                  <button className="flex items-center gap-2 hover:text-violet-400 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg> <span className="text-xs font-bold">{post.likes}</span></button>
-                  <button className="flex items-center gap-2 hover:text-blue-400 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"/></svg> <span className="text-xs font-bold">{post.comments}</span></button>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        {/* 3. DIREITA: WIDGETS (Sticky) */}
-        <aside className="hidden lg:block w-[320px] shrink-0 sticky top-24 h-fit space-y-6">
-            
-            {/* Trending */}
-            <div className={widgetCardClass + " p-5"}>
-              <h3 className="font-bold text-white mb-4 text-lg flex items-center gap-2">
-                <span className="text-orange-500">🔥</span> Trending Topics
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {trendingTags.map(tag => (
-                  <span key={tag} className="px-3 py-1.5 bg-zinc-800/40 hover:bg-zinc-800/80 border border-zinc-700/40 rounded-full text-xs text-zinc-300 hover:text-white cursor-pointer transition-colors backdrop-blur-sm">
-                    #{tag}
-                  </span>
-                ))}
-              </div>
+          <div className={widgetCardClass + " p-5"}>
+            <h3 className="font-bold text-white mb-4 text-sm flex items-center gap-2 uppercase tracking-wider border-b border-zinc-800 pb-2">
+              <UserPlus size={16} className="text-violet-500"/> Para Seguir
+            </h3>
+            <div className="space-y-4">
+               {[{ name: 'Rocketseat', user: '@rocketseat', bg: 'bg-blue-600' }].map((u, i) => (
+                   <div key={i} className="flex justify-between items-center group">
+                       <div className="flex items-center gap-3">
+                           <div className={`w-8 h-8 rounded-full ${u.bg} flex items-center justify-center text-xs font-bold text-white shadow-lg`}>{u.name[0]}</div>
+                           <div className="leading-tight">
+                               <p className="text-sm font-bold text-zinc-200 group-hover:text-white transition-colors">{u.name}</p>
+                               <p className="text-[10px] text-zinc-500">{u.user}</p>
+                           </div>
+                       </div>
+                       <button className="text-xs font-bold text-violet-400 hover:text-violet-300 hover:underline">Seguir</button>
+                   </div>
+               ))}
             </div>
-
-            {/* Who to Follow */}
-            <div className={widgetCardClass + " p-5"}>
-              <h3 className="font-bold text-zinc-500 mb-4 text-sm uppercase tracking-wider">Para seguir</h3>
-              <div className="space-y-4">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="flex items-center justify-between group">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-lg bg-linear-to-br ${i===1 ? 'from-blue-500 to-cyan-500' : i===2 ? 'from-purple-500 to-pink-500' : 'from-orange-500 to-red-500'} flex items-center justify-center shadow-lg`}>
-                          <span className="text-white font-bold text-xs">{i===1 ? 'R' : i===2 ? 'B' : 'D'}</span>
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-bold text-zinc-200 group-hover:text-white transition-colors">{i===1 ? 'Rocketseat' : i===2 ? 'Backend Br' : 'DevOps'}</p>
-                        <p className="text-xs text-zinc-500">Education</p>
-                      </div>
-                    </div>
-                    <button className="text-violet-400 text-xs font-bold hover:bg-violet-500/10 px-3 py-1 rounded-full transition-colors">Seguir</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="text-xs text-zinc-600 px-2 text-center leading-relaxed">
-               © 2025 DevFlow Inc.
-            </div>
-
-        </aside>
-
+          </div>
+      </aside>
     </AppShell>
   );
 }

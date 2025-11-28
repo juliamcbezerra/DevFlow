@@ -45,12 +45,12 @@ export default function CommunityPage() {
       <Sidebar />
       
       <div className="flex-1 min-w-0 pb-20 overflow-y-auto no-scrollbar h-full">
-        <div className="max-w-[1000px] mx-auto pt-6 px-4 space-y-8">
+        <div className="max-w-[1000px] px-4 space-y-8">
           
           {/* --- HEADER --- */}
           <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-white tracking-tight">Comunidade</h1>
+              <h1 className="text-3xl font-bold text-white tracking-tight">🫂 Comunidade</h1>
               <p className="text-zinc-400 mt-2">Conecte-se com desenvolvedores, mentores e parceiros de código.</p>
             </div>
             
