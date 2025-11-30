@@ -63,8 +63,8 @@ export class SocialService {
       take: 50,
       include: {
         author: { select: { id: true, name: true, username: true, avatarUrl: true } },
-        project: { select: { id: true, name: true, slug: true, tags: true } }, // Incluído slug
-        votes: { select: { value: true } },
+        project: { select: { id: true, name: true, slug: true, tags: true } }, 
+        votes: { select: { value: true, userId: true } },
         _count: { select: { comments: true } }
       }
     });
@@ -72,6 +72,8 @@ export class SocialService {
     const mappedPosts = posts.map(post => {
       let score = post.votes.reduce((acc, curr) => acc + curr.value, 0);
       let sortScore = score;
+
+      const userVote = post.votes.find(v => v.userId === userId)?.value || 0;
 
       if (type === 'foryou' && post.project && post.project.tags) {
          const matches = post.project.tags.filter(tag => user.interestTags.includes(tag)).length;
@@ -81,7 +83,8 @@ export class SocialService {
       const { votes, ...rest } = post;
       
       return { 
-        ...rest, 
+        ...rest,
+        userVote, 
         _count: { comments: post._count.comments, votes: score },
         sortScore 
       };
@@ -95,7 +98,7 @@ export class SocialService {
   }
 
   // --- 3. FEED DO PROJETO ---
-  async findAllByProject(projectId: string) {
+  async findAllByProject(projectId: string, userId?: string) {
     const posts = await this.prisma.post.findMany({
       where: { projectId: projectId, deletedAt: null },
       orderBy: { createdAt: 'desc' },

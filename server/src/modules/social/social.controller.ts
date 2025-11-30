@@ -17,15 +17,56 @@ export class SocialController {
     private readonly prisma: PrismaService 
   ) {}
 
+  // --- 1. FEED E WIDGETS ---
+
   @Get('posts') 
   async findAllGlobal(@Req() req: any, @Query('type') type: string) {
     const feedType = type === 'following' ? 'following' : 'foryou';
     return this.socialService.findAllSmart(req.user.id, feedType);
   }
 
-  // --- NOVO: BUSCAR POSTS DE UM USUÁRIO (Colocar ANTES de :postId) ---
+  // Novo Endpoint: Trending Tags
+  @Get('tags/trending')
+  async getTrendingTags() {
+    try {
+        // Tenta query nativa para contar tags dentro de arrays
+        const result = await this.prisma.$queryRaw`
+            SELECT tag, count(*)::int as count 
+            FROM (SELECT unnest(tags) as tag FROM "Project") t 
+            GROUP BY tag ORDER BY count DESC LIMIT 10
+        `;
+        return result; 
+    } catch {
+        // Fallback se o banco não suportar ou estiver vazio
+        return []; 
+    }
+  }
+
+  // Novo Endpoint: Sugestões de Usuários
+  @Get('users/suggestions')
+  async getWhoToFollow(@Req() req: any) {
+      // Retorna 5 usuários que eu não sigo (exceto eu mesmo)
+      const following = await this.prisma.follows.findMany({
+          where: { followerId: req.user.id },
+          select: { followingId: true }
+      });
+      const followingIds = following.map(f => f.followingId);
+
+      const users = await this.prisma.user.findMany({
+          where: { 
+              id: { notIn: [req.user.id, ...followingIds] },
+          },
+          take: 5,
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, name: true, username: true, avatarUrl: true }
+      });
+      return users;
+  }
+
+  // --- 2. BUSCA POR USUÁRIO ---
+
   @Get('posts/user/:username')
-  async findByUser(@Param('username') username: string) {
+  async findByUser(@Param('username') username: string, @Req() req: any) { // Adicionado req
     const user = await this.prisma.user.findUnique({ where: { username } });
     if (!user) throw new NotFoundException('Usuário não encontrado');
 
@@ -35,17 +76,26 @@ export class SocialController {
       include: {
         author: { select: { id: true, name: true, username: true, avatarUrl: true } },
         project: { select: { id: true, name: true, slug: true } },
-        votes: { select: { value: true } },
+        votes: { select: { value: true, userId: true } }, // Traz userId do voto
         _count: { select: { comments: true } }
       }
     });
 
+    // Mapeamento com userVote correto
     return posts.map(post => {
         const score = post.votes.reduce((acc, curr) => acc + curr.value, 0);
+        const userVote = post.votes.find(v => v.userId === req.user.id)?.value || 0; // Calcula estado
+        
         const { votes, ...rest } = post;
-        return { ...rest, _count: { comments: post._count.comments, votes: score } };
+        return { 
+            ...rest, 
+            userVote, 
+            _count: { comments: post._count.comments, votes: score } 
+        };
     });
   }
+
+  // --- 3. CRUD DE POSTS E PROJETOS ---
 
   @Post('projects/:projectId/posts')
   async createPost(@Param('projectId') projectId: string, @Body(ValidationPipe) dto: CreatePostDto, @Req() req: any) {
@@ -73,7 +123,6 @@ export class SocialController {
     return this.socialService.getCommentsTree(postId);
   }
 
-  // Rota Genérica (Fica por último para não roubar a vez das outras)
   @Get('posts/:postId')
   async getPost(@Param('postId') postId: string) {
     return this.socialService.findPostById(postId);
