@@ -1,6 +1,7 @@
 import api from "./api";
+import { Post } from "./postsService";
+import { Project } from "./projectService";
 
-// Tipo para a lista da Comunidade
 export interface User {
   id: string;
   name: string;
@@ -12,39 +13,53 @@ export interface User {
   };
 }
 
-// Tipo completo para o Perfil Detalhado
 export interface UserProfile {
   id: string;
   name: string;
   username: string;
   avatarUrl?: string;
   bio?: string;
+  createdAt: string;
   interestTags: string[];
   _count: {
     followedBy: number;
     following: number;
     posts: number;
+    projectsOwned: number;
   };
-  posts: Array<{
-    id: string;
-    content: any; // O conteúdo do post (JSON ou string)
-    createdAt: string;
-    _count: { likes: number; comments: number };
-  }>;
+  isFollowing: boolean;
+  isMe: boolean;
 }
 
 export const userService = {
-  // Lista todos (Comunidade)
+  // 1. Lista todos (Comunidade)
   getAll: async () => {
     const { data } = await api.get<User[]>('/users');
     return data;
   },
 
-  // Busca perfil detalhado
+  // 2. Busca perfil detalhado
   getByUsername: async (username: string) => {
     const { data } = await api.get<UserProfile>(`/users/${username}`);
     return data;
   },
 
-  // Aqui você pode adicionar follow/unfollow futuramente
+  // 3. Busca Posts (CORRIGIDO PARA A ROTA DO SOCIAL CONTROLLER)
+  getUserPosts: async (username: string) => {
+    // <--- MUDANÇA AQUI: Era /users/.../posts, agora é /social/posts/user/...
+    const { data } = await api.get<Post[]>(`/social/posts/user/${username}`);
+    return data;
+  },
+
+  // 4. Busca Projetos (CORRIGIDO PARA A ROTA DO PROJECT CONTROLLER)
+  getUserProjects: async (username: string) => {
+    // <--- MUDANÇA AQUI: Era /users/.../projects, agora é /projects/user/...
+    const { data } = await api.get<Project[]>(`/projects/user/${username}`);
+    return data;
+  },
+
+  // 5. Toggle Follow
+  toggleFollow: async (username: string) => {
+    await api.post(`/users/${username}/follow`);
+  }
 };

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { MessageCircle, CornerDownRight, Loader2, Send } from "lucide-react";
 import { Comment, postsService } from "../../services/postsService";
 import { useAuth } from "../../context/AuthContext";
+import { RichTextDisplay } from "./RichTextDisplay";
 
 interface CommentItemProps {
   comment: Comment;
@@ -73,8 +74,8 @@ export function CommentItem({ comment, postId, onReplySuccess }: CommentItemProp
             </div>
 
             {/* Texto do Comentário */}
-            <div className="text-sm text-zinc-300 leading-relaxed mb-1">
-                {comment.content}
+            <div className="text-sm text-zinc-300 mb-1">
+                <RichTextDisplay content={comment.content} />
             </div>
 
             {/* Botão Responder */}

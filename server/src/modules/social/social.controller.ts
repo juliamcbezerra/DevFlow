@@ -1,72 +1,70 @@
 import {
-  Controller,
-  Post,
-  Body,
-  Param,
-  UseGuards,
-  Req,
-  ValidationPipe,
-  Get,
-  NotFoundException, 
-  Patch,
-  Delete,
-  ForbiddenException,
-  Query,
+  Controller, Post, Body, Param, UseGuards, Req, ValidationPipe, Get,
+  NotFoundException, Patch, Delete, ForbiddenException, Query,
 } from '@nestjs/common';
 import { SocialService } from './social.service';
 import { CreatePostDto } from './dto/create-post.dto';
-import { VoteDto } from './dto/vote.dto'; // Se não usar no controller, pode remover
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { JwtGuard } from '../jwt/jwt.guard';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @UseGuards(JwtGuard)
 @Controller('social')
 export class SocialController {
-  constructor(private readonly socialService: SocialService) {}
+  constructor(
+    private readonly socialService: SocialService,
+    private readonly prisma: PrismaService 
+  ) {}
 
-  // --- 1. FEED INTELIGENTE (Global) ---
-  // Rota: GET /social/posts?type=foryou (ou following)
   @Get('posts') 
   async findAllGlobal(@Req() req: any, @Query('type') type: string) {
-    // Valida o tipo, padrão é 'foryou'
     const feedType = type === 'following' ? 'following' : 'foryou';
     return this.socialService.findAllSmart(req.user.id, feedType);
   }
 
-  // --- 2. CRIAR POST (Em Projeto) ---
-  // Rota: POST /social/projects/:projectId/posts
-  @Post('projects/:projectId/posts')
-  async createPost(
-    @Param('projectId') projectId: string, 
-    @Body(ValidationPipe) dto: CreatePostDto,
-    @Req() req: any,
-  ) {
-    const userId = req.user.id;
-    return this.socialService.createPost(dto, userId, projectId);
+  // --- NOVO: BUSCAR POSTS DE UM USUÁRIO (Colocar ANTES de :postId) ---
+  @Get('posts/user/:username')
+  async findByUser(@Param('username') username: string) {
+    const user = await this.prisma.user.findUnique({ where: { username } });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    const posts = await this.prisma.post.findMany({
+      where: { authorId: user.id, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: { select: { id: true, name: true, username: true, avatarUrl: true } },
+        project: { select: { id: true, name: true, slug: true } },
+        votes: { select: { value: true } },
+        _count: { select: { comments: true } }
+      }
+    });
+
+    return posts.map(post => {
+        const score = post.votes.reduce((acc, curr) => acc + curr.value, 0);
+        const { votes, ...rest } = post;
+        return { ...rest, _count: { comments: post._count.comments, votes: score } };
+    });
   }
 
-  // --- 3. FEED DO PROJETO ---
+  @Post('projects/:projectId/posts')
+  async createPost(@Param('projectId') projectId: string, @Body(ValidationPipe) dto: CreatePostDto, @Req() req: any) {
+    return this.socialService.createPost(dto, req.user.id, projectId);
+  }
+
   @Get('projects/:projectId/posts')
   async findAllByProject(@Param('projectId') projectId: string) {
     return this.socialService.findAllByProject(projectId);
   }
 
-  // --- 4. VOTAR ---
   @Post('vote')
   async vote(@Body() body: { postId: string; value: number }, @Req() req: any) {
     const safeValue = body.value > 0 ? 1 : -1;
-    // O service espera um objeto VoteDto, então adaptamos aqui
     return this.socialService.toggleVote(req.user.id, body.postId, { value: safeValue });
   }
 
-  // --- 5. COMENTÁRIOS ---
   @Post('posts/:postId/comments')
-  async createComment(
-    @Param('postId') postId: string,
-    @Body(ValidationPipe) dto: CreateCommentDto,
-    @Req() req: any,
-  ) {
+  async createComment(@Param('postId') postId: string, @Body(ValidationPipe) dto: CreateCommentDto, @Req() req: any) {
     return this.socialService.createComment(req.user.id, postId, dto);
   }
 
@@ -75,20 +73,14 @@ export class SocialController {
     return this.socialService.getCommentsTree(postId);
   }
 
-  // --- 6. POST INDIVIDUAL ---
+  // Rota Genérica (Fica por último para não roubar a vez das outras)
   @Get('posts/:postId')
   async getPost(@Param('postId') postId: string) {
-    const post = await this.socialService.findPostById(postId);
-    if (!post) throw new NotFoundException('Post não encontrado.');
-    return post;
+    return this.socialService.findPostById(postId);
   }
 
   @Patch('posts/:postId')
-  async update(
-    @Param('postId') postId: string,
-    @Body(ValidationPipe) dto: UpdatePostDto,
-    @Req() req: any,
-  ) {
+  async update(@Param('postId') postId: string, @Body(ValidationPipe) dto: UpdatePostDto, @Req() req: any) {
     try {
       return await this.socialService.updatePost(req.user.id, postId, dto);
     } catch (error: any) {

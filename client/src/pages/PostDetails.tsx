@@ -4,6 +4,7 @@ import { AppShell } from "../components/layout/AppShell";
 import { Sidebar } from "../components/layout/Sidebar";
 import { postsService, Post, Comment } from "../services/postsService";
 import { CommentItem } from "../components/feed/CommentItem";
+import { RichTextDisplay } from "../components/feed/RichTextDisplay";
 import { ArrowLeft, Loader2, MessageCircle, ArrowBigUp, ArrowBigDown, Share2, Terminal } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -138,8 +139,8 @@ export default function PostDetailsPage() {
                     </div>
                     
                     {/* Texto do Post */}
-                    <div className="text-zinc-200 mb-6 text-lg leading-relaxed whitespace-pre-wrap">
-                        {post.content}
+                    <div className="mb-6">
+                        <RichTextDisplay content={post.content} />
                     </div>
 
                     {/* Rodapé do Post (Stats) */}

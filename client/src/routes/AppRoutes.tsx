@@ -3,7 +3,7 @@ import LoginPage from '../pages/Login';
 import SignupPage from '../pages/Signup';
 import FeedPage from '../pages/Feed';
 import ExplorePage from '../pages/Explore';
-import ProfilePage from '../pages/Profile';
+import ProfilePage from '../pages/ProfilePage';
 import ProjectPage from '../pages/Project';
 import PostDetailsPage from '../pages/PostDetails';
 import CommunityPage from '../pages/Community';
