@@ -69,8 +69,12 @@ export const postsService = {
   },
 
   // 6. Criar Comentário
-  createComment: async (postId: string, content: string) => {
-    const { data } = await api.post<Comment>(`/social/posts/${postId}/comments`, { content });
+  createComment: async (postId: string, content: string, parentId?: string) => {
+    const { data } = await api.post<Comment>(`/social/posts/${postId}/comments`, { 
+      content,
+      parentId 
+    });
     return data;
   }
 };
+

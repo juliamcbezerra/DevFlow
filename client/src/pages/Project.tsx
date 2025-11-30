@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { Sidebar } from "../components/layout/Sidebar";
 import { useAuth } from "../context/AuthContext";
@@ -19,6 +19,8 @@ export default function ProjectPage() {
   
   const [project, setProject] = useState<ProjectDetails | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
+  
+  const navigate = useNavigate();
   
   const [loadingProject, setLoadingProject] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
@@ -147,7 +149,7 @@ export default function ProjectPage() {
                                 <span className="font-bold text-sm text-zinc-200 my-1">{post._count?.votes || 0}</span>
                                 <button onClick={() => votePost(post.id, -1)} className="text-zinc-500 hover:text-violet-500 p-1 rounded hover:bg-zinc-800/50 transition-colors"><ArrowBigDown size={24} strokeWidth={2} /></button>
                             </div>
-                            <div className="flex-1 p-4">
+                            <div className="flex-1 p-4 cursor-pointer hover:bg-zinc-900/40 transition-colors" onClick={() => navigate(`/post/${post.id}`)}>
                                 <div className="flex items-center gap-2 mb-2 text-xs text-zinc-500">
                                     <span className="font-bold text-zinc-300 hover:text-white cursor-pointer">@{post.author.username}</span>
                                     <span>•</span>

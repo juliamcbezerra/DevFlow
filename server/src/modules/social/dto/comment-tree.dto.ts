@@ -6,6 +6,13 @@ export class CommentAuthorDTO {
 
   @ApiProperty()
   name: string | null;
+
+  // --- ADICIONADO ---
+  @ApiProperty()
+  username: string;
+
+  @ApiProperty({ required: false, nullable: true })
+  avatarUrl: string | null;
 }
 
 export class CommentTreeDTO {

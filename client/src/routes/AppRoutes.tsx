@@ -5,6 +5,7 @@ import FeedPage from '../pages/Feed';
 import ExplorePage from '../pages/Explore';
 import ProfilePage from '../pages/Profile';
 import ProjectPage from '../pages/Project';
+import PostDetailsPage from '../pages/PostDetails';
 import CommunityPage from '../pages/Community';
 import { PrivateRoute } from './PrivateRoute';
 
@@ -34,6 +35,9 @@ export function AppRoutes() {
 
         {/* Rota de Projeto Dinâmico */}
         <Route path="/projects/:id" element={<ProjectPage />} />
+
+        {/* Rota de Detalhes do Post */}
+        <Route path="/post/:id" element={<PostDetailsPage />} />
 
         {/* Adicione aqui as futuras páginas como /projects, /profile etc */}
       </Route>

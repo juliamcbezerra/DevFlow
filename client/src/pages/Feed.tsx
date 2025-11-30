@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { Sidebar } from "../components/layout/Sidebar";
 import { usePosts } from "../hooks/usePosts";
@@ -14,6 +14,8 @@ const widgetCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/
 export default function FeedPage() {
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('type') || 'foryou';
+
+  const navigate = useNavigate();
   
   const [posts, setPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,7 +77,7 @@ export default function FeedPage() {
                           </div>
 
                           {/* CONTEÚDO */}
-                          <div className="flex-1 p-4 sm:p-5">
+                          <div className="flex-1 p-4 sm:p-5 cursor-pointer hover:bg-zinc-900/40 transition-colors" onClick={() => navigate(`/post/${post.id}`)} >
                               <div className="flex items-center gap-3 mb-3">
                                   <img src={post.author.avatarUrl || `https://ui-avatars.com/api/?name=${post.author.name}&background=random`} className="w-6 h-6 rounded-full ring-1 ring-zinc-700 object-cover" />
                                   <div className="flex items-center gap-2 flex-wrap">
