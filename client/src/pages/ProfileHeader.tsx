@@ -1,5 +1,7 @@
 import { MapPin, Calendar, Link as LinkIcon, Edit3, UserPlus, UserCheck } from "lucide-react";
 import { UserProfile } from "../services/userService";
+import { useNavigate } from "react-router-dom";
+
 
 interface ProfileHeaderProps {
   profile: UserProfile;
@@ -11,6 +13,8 @@ export function ProfileHeader({ profile, onFollowToggle }: ProfileHeaderProps) {
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
   };
+
+  const navigate = useNavigate();
 
   return (
     <div className="relative mb-6">
@@ -46,7 +50,7 @@ export function ProfileHeader({ profile, onFollowToggle }: ProfileHeaderProps) {
               </div>
 
               {profile.isMe ? (
-                <button className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-full font-bold text-sm transition-all border border-zinc-700">
+                <button className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-full font-bold text-sm transition-all border border-zinc-700" onClick={() => navigate('/settings')}>
                   <Edit3 size={16} /> Editar Perfil
                 </button>
               ) : (

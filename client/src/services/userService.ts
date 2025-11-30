@@ -31,6 +31,12 @@ export interface UserProfile {
   isMe: boolean;
 }
 
+export interface UpdateProfileData {
+  bio?: string;
+  avatarUrl?: string;
+  interestTags?: string[];
+}
+
 export const userService = {
   // 1. Lista todos (Comunidade)
   getAll: async () => {
@@ -61,5 +67,11 @@ export const userService = {
   // 5. Toggle Follow
   toggleFollow: async (username: string) => {
     await api.post(`/users/${username}/follow`);
+  },
+
+  updateProfile: async (data: UpdateProfileData) => {
+    const response = await api.patch('/users/me', data);
+    return response.data;
   }
 };
+

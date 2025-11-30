@@ -7,6 +7,7 @@ import ProfilePage from '../pages/ProfilePage';
 import ProjectPage from '../pages/Project';
 import PostDetailsPage from '../pages/PostDetails';
 import CommunityPage from '../pages/Community';
+import SettingsPage from '../pages/Settings';
 import { PrivateRoute } from './PrivateRoute';
 
 export function AppRoutes() {
@@ -38,6 +39,9 @@ export function AppRoutes() {
 
         {/* Rota de Detalhes do Post */}
         <Route path="/post/:id" element={<PostDetailsPage />} />
+
+        {/* Rota de Configurações */}
+        <Route path="/settings" element={<SettingsPage />} />
 
         {/* Adicione aqui as futuras páginas como /projects, /profile etc */}
       </Route>

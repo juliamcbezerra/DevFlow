@@ -72,4 +72,24 @@ export class UserService {
       },
     });
   }
+
+  // Atualizar Perfil Completo
+  async updateProfile(userId: string, dto: any) { // Use 'any' ou importe o UpdateProfileDto
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        bio: dto.bio,
+        avatarUrl: dto.avatarUrl,
+        interestTags: dto.interestTags
+      },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        avatarUrl: true,
+        bio: true,
+        interestTags: true
+      }
+    });
+  }
 }

@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards, NotFoundExce
 import { JwtGuard } from '../jwt/jwt.guard'; 
 import { UserService } from './user.service';
 import { UpdateInterestsDto } from './dto/update-interests.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { PrismaService } from '../../prisma/prisma.service'; 
 
 @UseGuards(JwtGuard)
@@ -74,5 +75,10 @@ export class UserController {
       isFollowing: !!isFollowing,
       isMe: user.id === req.user.id
     };
+  }
+
+  @Patch('me')
+  async updateProfile(@Body() dto: UpdateProfileDto, @Req() req: any) {
+    return await this.userService.updateProfile(req.user.id, dto);
   }
 }
