@@ -2,215 +2,234 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { Sidebar } from "../components/layout/Sidebar";
-import { postsService, Post, Comment } from "../services/postsService";
-import { CommentItem } from "../components/feed/CommentItem";
-import { RichTextDisplay } from "../components/feed/RichTextDisplay";
-import { ArrowLeft, Loader2, MessageCircle, ArrowBigUp, ArrowBigDown, Share2, Terminal } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { RichTextDisplay } from "../components/feed/RichTextDisplay";
+import { PostOptions } from "../components/feed/PostOptions";
+import { CommentTree } from "../components/feed/CommentTree";
+import { CommentForm } from "../components/feed/CommentForm";
+import { ConfirmModal } from "../components/ui/ConfirmModal"; 
+import api from "../services/api"; 
+import { 
+    Loader2, MessageCircle, ArrowBigUp, ArrowBigDown, 
+    Share2, ChevronLeft
+} from "lucide-react";
 
 export default function PostDetailsPage() {
-  const { id } = useParams<{ id: string }>(); // Pega o ID da URL
-  const { user } = useAuth();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
-  const [post, setPost] = useState<Post | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   
-  // Estado para comentário novo (Raiz)
-  const [newComment, setNewComment] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  // Função central para carregar dados (passada para filhos também)
-  const loadData = async () => {
-    if (!id) return;
-    try {
-        // Busca Post e Comentários em paralelo
-        const [postData, commentsData] = await Promise.all([
-            postsService.getById(id),
-            postsService.getComments(id)
-        ]);
-        setPost(postData);
-        setComments(commentsData);
-    } catch (error) {
-        console.error("Erro ao carregar post", error);
-    } finally {
-        setLoading(false);
-    }
-  };
+  const [post, setPost] = useState<any>(null);
+  const [comments, setComments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   useEffect(() => {
-    loadData();
-  }, [id]);
+    async function loadPostData() {
+        if (!id) return;
+        try {
+            setLoading(true);
+            const { data: postData } = await api.get(`/social/posts/${id}`);
+            setPost(postData);
 
-  // Criar comentário no Post Principal
-  const handleRootComment = async () => {
-      if (!newComment.trim() || !id) return;
-      setSubmitting(true);
+            const { data: commentsData } = await api.get(`/social/posts/${id}/comments`);
+            setComments(commentsData);
+        } catch (error) {
+            console.error("Erro ao carregar post", error);
+            navigate('/feed');
+        } finally {
+            setLoading(false);
+        }
+    }
+    loadPostData();
+  }, [id, navigate]);
+
+  const refreshComments = async () => {
       try {
-          await postsService.createComment(id, newComment); // Sem parentId = Raiz
-          setNewComment("");
-          loadData(); // Recarrega para mostrar o novo comentário e atualizar contadores
-      } catch (err) {
-          console.error(err);
-          alert("Erro ao enviar comentário.");
-      } finally {
-          setSubmitting(false);
+          const { data } = await api.get(`/social/posts/${id}/comments`);
+          setComments(data);
+          setPost((prev: any) => ({ ...prev, _count: { ...prev._count, comments: prev._count.comments + 1 } }));
+      } catch (error) { console.error(error); }
+  };
+
+  const votePost = async (value: number) => {
+      if (!post) return;
+      const currentVote = post.userVote || 0;
+      let newVote = 0;
+      let scoreDelta = 0;
+
+      if (currentVote === value) {
+          newVote = 0;
+          scoreDelta = -value; 
+      } else if (currentVote === 0) {
+          newVote = value;
+          scoreDelta = value;
+      } else {
+          newVote = value;
+          scoreDelta = value * 2;
+      }
+
+      setPost((prev: any) => ({
+          ...prev,
+          userVote: newVote,
+          _count: { ...prev._count, votes: prev._count.votes + scoreDelta }
+      }));
+      await api.post('/social/vote', { postId: post.id, value });
+  };
+
+  const handleDeleteSuccess = () => {
+      if (post.project) {
+          navigate(`/projects/${post.project.slug || post.project.id}`);
+      } else {
+          navigate('/feed');
       }
   };
 
-  // Voto Otimista (Atualiza UI antes do Backend)
-  const votePost = async (value: number) => {
-      if(!post) return;
-      
-      // Atualiza estado local imediatamente
-      setPost({ 
-          ...post, 
-          _count: { ...post._count, votes: post._count.votes + value }
-      });
-      
-      // Envia pro backend em background
-      try {
-        await postsService.vote(post.id, value);
-      } catch (error) {
-        console.error("Erro ao votar", error);
-        // Opcional: Reverter estado em caso de erro
-      }
+  const handleBottomShare = () => {
+      navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`);
+      setIsShareModalOpen(true);
   };
 
   const formatDate = (dateString: string) => {
-    try { return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(dateString)); } catch { return ""; }
+    try { return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', year: 'numeric' }).format(new Date(dateString)); } catch (e) { return ""; }
   };
 
-  if (loading) return <AppShell><Sidebar/><div className="flex-1 flex justify-center items-center h-screen"><Loader2 className="animate-spin text-violet-500"/></div></AppShell>;
-  if (!post) return <AppShell><Sidebar/><div className="flex-1 p-10 text-center text-zinc-500">Post não encontrado.</div></AppShell>;
+  if (loading) return <AppShell><Sidebar /><div className="flex-1 flex items-center justify-center h-screen"><Loader2 className="animate-spin text-violet-500"/></div></AppShell>;
+  if (!post) return null;
 
   return (
     <AppShell>
       <Sidebar />
 
-      <div className="flex-1 min-w-0 max-w-[800px] space-y-6 pb-20 pt-6 px-4">
+      <div className="flex-1 min-w-0 max-w-[800px] space-y-6 pb-20 px-4 pt-6">
         
-        {/* Header Voltar */}
-        <button 
-            onClick={() => navigate(-1)} 
-            className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 text-sm mb-2 transition-colors group"
-        >
-            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 
-            Voltar
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors text-sm font-bold mb-4">
+            <ChevronLeft size={16} /> Voltar
         </button>
 
-        {/* --- POST PRINCIPAL --- */}
-        <article className="bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden shadow-lg">
+        {/* CARD DO POST */}
+        <article className="bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl shadow-lg">
             <div className="flex h-full">
                 
-                {/* Coluna de Votos */}
-                <div className="w-12 bg-zinc-950/30 flex flex-col items-center py-4 border-r border-zinc-800/50 gap-1 shrink-0">
-                    <button onClick={() => votePost(1)} className="text-zinc-500 hover:text-orange-500 p-1 rounded hover:bg-zinc-800/50 transition-colors active:scale-90"><ArrowBigUp size={24} strokeWidth={2} /></button>
-                    <span className="font-bold text-sm text-zinc-200 my-1">{post._count.votes}</span>
-                    <button onClick={() => votePost(-1)} className="text-zinc-500 hover:text-violet-500 p-1 rounded hover:bg-zinc-800/50 transition-colors active:scale-90"><ArrowBigDown size={24} strokeWidth={2} /></button>
+                {/* Coluna Votos */}
+                <div className="w-14 bg-zinc-950/30 flex flex-col items-center py-4 border-r border-zinc-800/50 gap-2 shrink-0 rounded-l-2xl">
+                    <button onClick={() => votePost(1)} className={`p-1.5 rounded transition-all active:scale-90 ${post.userVote === 1 ? 'text-orange-500 bg-orange-500/10' : 'text-zinc-500 hover:text-orange-500 hover:bg-zinc-800/50'}`}>
+                        <ArrowBigUp size={28} strokeWidth={2} className={post.userVote === 1 ? 'fill-orange-500/20' : ''} />
+                    </button>
+                    <span className={`font-bold text-lg my-1 ${post.userVote !== 0 ? (post.userVote === 1 ? 'text-orange-500' : 'text-violet-500') : 'text-zinc-200'}`}>
+                        {post._count?.votes || 0}
+                    </span>
+                    <button onClick={() => votePost(-1)} className={`p-1.5 rounded transition-all active:scale-90 ${post.userVote === -1 ? 'text-violet-500 bg-violet-500/10' : 'text-zinc-500 hover:text-violet-500 hover:bg-zinc-800/50'}`}>
+                        <ArrowBigDown size={28} strokeWidth={2} className={post.userVote === -1 ? 'fill-violet-500/20' : ''} />
+                    </button>
                 </div>
 
-                {/* Conteúdo do Post */}
-                <div className="flex-1 p-6">
-                    {/* Cabeçalho do Post */}
-                    <div className="flex items-center gap-3 mb-4">
-                        <img 
-                            src={post.author.avatarUrl || `https://ui-avatars.com/api/?name=${post.author.name}`} 
-                            className="w-10 h-10 rounded-full ring-2 ring-zinc-800 object-cover" 
-                            alt={post.author.name}
-                        />
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <span className="font-bold text-zinc-100 text-base">{post.author.name}</span>
-                                <span className="text-xs text-zinc-500">@{post.author.username}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs">
-                                {post.project ? (
-                                    <Link to={`/projects/${post.project.slug}`} className="text-violet-400 font-bold uppercase tracking-wider hover:underline">
-                                        c/{post.project.slug}
+                {/* Conteúdo Principal */}
+                <div className="flex-1 p-6 sm:p-8 min-w-0">
+                    
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-6">
+                        <div className="flex items-center gap-4">
+                            <img 
+                                src={post.author.avatarUrl || `https://ui-avatars.com/api/?name=${post.author.name}&background=random`} 
+                                className="w-10 h-10 rounded-full ring-2 ring-zinc-800 object-cover" 
+                            />
+                            <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    {post.project ? (
+                                        <Link to={`/projects/${post.project.slug || post.project.id}`} className="font-bold text-zinc-200 hover:underline">
+                                            c/{post.project.name}
+                                        </Link>
+                                    ) : (
+                                        <span className="font-bold text-zinc-500">Geral</span>
+                                    )}
+                                    <span className="text-zinc-600 text-[10px]">•</span>
+                                    <span className="text-zinc-500 text-xs">Postado por</span>
+                                    <Link to={`/profile/${post.author.username}`} className="text-violet-400 hover:text-violet-300 text-xs font-bold">
+                                        @{post.author.username}
                                     </Link>
-                                ) : (
-                                    <span className="text-zinc-600 font-bold uppercase tracking-wider">Geral</span>
-                                )}
-                                <span className="text-zinc-600">• {formatDate(post.createdAt)}</span>
+                                </div>
+                                <p className="text-zinc-500 text-xs mt-0.5">{formatDate(post.createdAt)}</p>
                             </div>
+                        </div>
+
+                        {/* Menu Options */}
+                        <div className="relative">
+                            <PostOptions 
+                                postId={post.id} 
+                                authorId={post.author.id} 
+                                onDeleteSuccess={handleDeleteSuccess} 
+                            />
                         </div>
                     </div>
                     
-                    {/* Texto do Post */}
-                    <div className="mb-6">
+                    {/* Conteúdo */}
+                    <div className="text-zinc-200 mb-8 leading-relaxed whitespace-pre-wrap text-base wrap-break-word">
                         <RichTextDisplay content={post.content} />
                     </div>
 
-                    {/* Rodapé do Post (Stats) */}
-                    <div className="flex gap-6 text-zinc-500 text-sm font-bold border-t border-zinc-800/50 pt-4">
-                        <div className="flex items-center gap-2 text-zinc-300">
-                            <MessageCircle size={18}/> 
-                            {comments.length} Comentários
+                    {/* Footer */}
+                    <div className="flex gap-6 pt-6 border-t border-zinc-800/50">
+                        <div className="flex items-center gap-2 text-zinc-400 text-sm font-bold">
+                            <MessageCircle size={18}/> {post._count?.comments || 0} Comentários
                         </div>
-                        <button className="flex items-center gap-2 hover:text-zinc-300 transition-colors">
-                            <Share2 size={18}/> 
-                            Compartilhar
+                        <button 
+                            onClick={handleBottomShare}
+                            className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm font-bold"
+                        >
+                            <Share2 size={18}/> Compartilhar
                         </button>
                     </div>
                 </div>
             </div>
         </article>
 
-        {/* --- ÁREA DE COMENTÁRIOS --- */}
-        <div className="border-t border-zinc-800 pt-6">
-            <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-lg">
-                Discussão <span className="bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded text-xs ml-2">{comments.length}</span>
-            </h3>
-
-            {/* Input Novo Comentário (Raiz) */}
-            <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-4 flex gap-4 mb-8 focus-within:border-zinc-700 transition-colors">
-                <img 
-                    src={user?.avatarUrl || `https://ui-avatars.com/api/?name=${user?.name}`} 
-                    className="w-10 h-10 rounded-full ring-1 ring-zinc-800 object-cover" 
-                    alt="Seu avatar"
-                />
-                <div className="flex-1">
-                    <textarea 
-                        value={newComment}
-                        onChange={e => setNewComment(e.target.value)}
-                        placeholder="O que você pensa sobre isso?"
-                        className="w-full bg-transparent text-zinc-200 text-sm focus:outline-none resize-none h-20 placeholder-zinc-600"
+        {/* SEÇÃO DE COMENTÁRIOS */}
+        <div className="mt-8">
+            
+            {/* Input Principal */}
+            <div className="mb-8">
+                <div className="flex gap-4 items-start">
+                    <img 
+                        src={user?.avatarUrl || `https://ui-avatars.com/api/?name=${user?.name}`} 
+                        className="w-10 h-10 rounded-full object-cover ring-2 ring-zinc-800 shrink-0"
                     />
-                    <div className="flex justify-end mt-2">
-                        <button 
-                            onClick={handleRootComment}
-                            disabled={submitting || !newComment.trim()}
-                            className="bg-zinc-100 hover:bg-white text-zinc-950 px-5 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-white/5"
-                        >
-                            {submitting ? <Loader2 className="animate-spin w-3 h-3"/> : 'Comentar'}
-                        </button>
-                    </div>
+                    <CommentForm 
+                        postId={post.id} 
+                        onSuccess={refreshComments} 
+                    />
                 </div>
             </div>
 
-            {/* Lista Recursiva de Comentários */}
-            <div className="space-y-6 pb-20">
-                {comments.map(comment => (
-                    <CommentItem 
-                        key={comment.id} 
-                        comment={comment} 
-                        postId={post.id} 
-                        onReplySuccess={loadData} // Mágica: Recarrega a árvore inteira se houver resposta
-                    />
-                ))}
-                
-                {comments.length === 0 && (
-                    <div className="text-center py-16 opacity-50 border border-dashed border-zinc-800 rounded-xl">
-                        <div className="bg-zinc-900 p-4 rounded-full inline-block mb-3">
-                            <Terminal size={32} className="text-zinc-600"/>
-                        </div>
-                        <p className="text-zinc-500 font-medium">Seja o primeiro a iniciar a conversa!</p>
-                    </div>
-                )}
-            </div>
+            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2 border-b border-zinc-800 pb-4">
+                Respostas <span className="text-zinc-500 text-sm font-normal">({post._count?.comments})</span>
+            </h3>
+            
+            {/* Árvore */}
+            {comments.length > 0 ? (
+                <CommentTree 
+                    comments={comments} 
+                    postId={post.id} 
+                    onReplyAdded={refreshComments} 
+                />
+            ) : (
+                <div className="text-center py-12 border border-dashed border-zinc-800 rounded-2xl bg-zinc-900/30 text-zinc-500">
+                    <MessageCircle size={32} className="mx-auto mb-3 opacity-50"/>
+                    Seja o primeiro a compartilhar conhecimento!
+                </div>
+            )}
         </div>
+
+        <ConfirmModal 
+            isOpen={isShareModalOpen}
+            onClose={() => setIsShareModalOpen(false)}
+            onConfirm={() => setIsShareModalOpen(false)}
+            title="Link Copiado!"
+            description="O link para esta publicação foi copiado para sua área de transferência."
+            confirmText="Entendido"
+            cancelText="Fechar"
+            isDestructive={false}
+        />
 
       </div>
     </AppShell>

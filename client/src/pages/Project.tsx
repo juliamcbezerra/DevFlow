@@ -10,7 +10,7 @@ import { PostOptions } from "../components/feed/PostOptions";
 import api from "../services/api"; 
 import { 
     Loader2, MessageCircle, ArrowBigUp, ArrowBigDown, 
-    Share2, Users, Hash, ShieldCheck, Terminal, LogOut, UserPlus, Crown
+    Share2, Users, ShieldCheck, Terminal, LogOut, UserPlus, Crown
 } from "lucide-react";
 
 const postCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden hover:border-zinc-700/80 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-violet-900/5";
@@ -127,7 +127,7 @@ export default function ProjectPage() {
       {/* ÁREA CENTRAL */}
       <div className="flex-1 min-w-0 max-w-[900px] space-y-6 pb-20 px-4">
         
-        {/* HEADER */}
+        {/* HEADER DO PROJETO */}
         <div className="relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/50 backdrop-blur-xl">
             <div className={`h-32 w-full bg-linear-to-r from-violet-900/40 to-blue-900/40`}></div>
             <div className="px-6 pb-6">
@@ -158,7 +158,7 @@ export default function ProjectPage() {
             </div>
         </div>
 
-        {/* WIDGET */}
+        {/* WIDGET CRIAR POST */}
         {project.isMember ? (
             <CreatePostWidget projectId={project.id} onPostCreated={handleNewPost} />
         ) : (
@@ -168,7 +168,7 @@ export default function ProjectPage() {
             </div>
         )}
 
-        {/* POSTS */}
+        {/* LISTA DE POSTS */}
         {loadingPosts ? (
              <div className="space-y-4">{[1,2,3].map(i => <div key={i} className="h-40 bg-zinc-900/40 rounded-2xl animate-pulse border border-zinc-800/50"></div>)}</div>
         ) : (
@@ -213,65 +213,68 @@ export default function ProjectPage() {
         )}
       </div>
 
-      {/* --- SIDEBAR DIREITA (ESTILO DISCORD) --- */}
-      <aside className="hidden xl:flex flex-col w-72 shrink-0 border-l border-zinc-800/50 bg-zinc-900/10 sticky top-24 h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar p-4">
+      {/* --- SIDEBAR DIREITA (PADRONIZADA) --- */}
+      <aside className="hidden xl:flex flex-col w-72 shrink-0 sticky top-24 h-[calc(100vh-7rem)]">
           
-          {/* CATEGORIA: DESENVOLVEDORES */}
-          <div className="mb-6">
-              <h3 className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3 px-2">
-                  Desenvolvedores — {staffList.length}
-              </h3>
+          <div className="flex flex-col h-full border border-zinc-800/50 bg-zinc-900/40 backdrop-blur-xl p-4 rounded-2xl shadow-xl shadow-black/20 overflow-y-auto no-scrollbar">
               
-              {staffList.map(member => (
-                  <Link key={member.id} to={`/profile/${member.username}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-800/50 transition-colors group">
-                      <div className="relative">
-                          <img 
-                            src={member.avatarUrl || `https://ui-avatars.com/api/?name=${member.name}`} 
-                            className="w-9 h-9 rounded-full object-cover ring-2 ring-zinc-800 group-hover:ring-violet-500/50 transition-all"
-                          />
-                          <div className={`absolute -top-1 -right-1 rounded-full p-0.5 border ${
-                              member.role === 'OWNER' 
-                                ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' 
-                                : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                          }`}>
-                              {member.role === 'OWNER' ? <Crown size={8} fill="currentColor"/> : <ShieldCheck size={8} fill="currentColor"/>}
+              {/* CATEGORIA: DESENVOLVEDORES */}
+              <div className="mb-6">
+                  <h3 className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3 px-2">
+                      Desenvolvedores — {staffList.length}
+                  </h3>
+                  
+                  {staffList.map(member => (
+                      <Link key={member.id} to={`/profile/${member.username}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-800/50 transition-colors group">
+                          <div className="relative">
+                              <img 
+                                src={member.avatarUrl || `https://ui-avatars.com/api/?name=${member.name}`} 
+                                className="w-9 h-9 rounded-full object-cover ring-2 ring-zinc-800 group-hover:ring-violet-500/50 transition-all"
+                              />
+                              <div className={`absolute -top-1 -right-1 rounded-full p-0.5 border ${
+                                  member.role === 'OWNER' 
+                                    ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' 
+                                    : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                              }`}>
+                                  {member.role === 'OWNER' ? <Crown size={8} fill="currentColor"/> : <ShieldCheck size={8} fill="currentColor"/>}
+                              </div>
                           </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-zinc-200 group-hover:text-white truncate">{member.name}</p>
-                          <p className={`text-[10px] font-medium ${member.role === 'OWNER' ? 'text-yellow-500' : 'text-blue-400'}`}>
-                              {member.role === 'OWNER' ? 'Owner' : 'Admin'}
+                          <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-zinc-200 group-hover:text-white truncate">{member.name}</p>
+                              <p className={`text-[10px] font-medium ${member.role === 'OWNER' ? 'text-yellow-500' : 'text-blue-400'}`}>
+                                  {member.role === 'OWNER' ? 'Owner' : 'Admin'}
+                              </p>
+                          </div>
+                      </Link>
+                  ))}
+              </div>
+
+              {/* CATEGORIA: MEMBROS */}
+              <div>
+                  <h3 className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3 px-2">
+                      Membros — {commonMembersCount}
+                  </h3>
+                  
+                  {commonMembersCount > 0 ? (
+                      <div className="px-2 py-3 bg-zinc-900/30 border border-zinc-800/50 rounded-lg text-center">
+                          <div className="flex -space-x-2 justify-center mb-2 overflow-hidden py-1">
+                              {[...Array(Math.min(4, commonMembersCount))].map((_, i) => (
+                                  <div key={i} className="w-6 h-6 rounded-full bg-zinc-800 border-2 border-zinc-900 ring-1 ring-zinc-800"></div>
+                              ))}
+                              {commonMembersCount > 4 && (
+                                  <div className="w-6 h-6 rounded-full bg-zinc-800 border-2 border-zinc-900 flex items-center justify-center text-[8px] text-zinc-500 font-bold">
+                                      +{commonMembersCount-4}
+                                  </div>
+                              )}
+                          </div>
+                          <p className="text-xs text-zinc-500 font-medium">
+                              +{commonMembersCount} participantes
                           </p>
                       </div>
-                  </Link>
-              ))}
-          </div>
-
-          {/* CATEGORIA: MEMBROS */}
-          <div>
-              <h3 className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3 px-2">
-                  Membros — {commonMembersCount}
-              </h3>
-              
-              {commonMembersCount > 0 ? (
-                  <div className="px-2 py-3 bg-zinc-900/30 border border-zinc-800/50 rounded-lg text-center">
-                      <div className="flex -space-x-2 justify-center mb-2 overflow-hidden py-1">
-                          {[...Array(Math.min(4, commonMembersCount))].map((_, i) => (
-                              <div key={i} className="w-6 h-6 rounded-full bg-zinc-800 border-2 border-zinc-900 ring-1 ring-zinc-800"></div>
-                          ))}
-                          {commonMembersCount > 4 && (
-                              <div className="w-6 h-6 rounded-full bg-zinc-800 border-2 border-zinc-900 flex items-center justify-center text-[8px] text-zinc-500 font-bold">
-                                  +{commonMembersCount-4}
-                              </div>
-                          )}
-                      </div>
-                      <p className="text-xs text-zinc-500 font-medium">
-                          +{commonMembersCount} participantes na comunidade
-                      </p>
-                  </div>
-              ) : (
-                  <p className="px-2 text-xs text-zinc-600 italic">Nenhum outro membro entrou ainda.</p>
-              )}
+                  ) : (
+                      <p className="px-2 text-xs text-zinc-600 italic">Nenhum outro membro.</p>
+                  )}
+              </div>
           </div>
 
       </aside>

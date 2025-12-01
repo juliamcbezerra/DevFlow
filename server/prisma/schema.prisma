@@ -165,34 +165,36 @@ model Post {
 
 model Comment {
   id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
   content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  parentId  String?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
 
-  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId String
-  post     Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId   String
-
-  // Respostas Aninhadas
-  parent   Comment?  @relation("NestedComments", fields: [parentId], references: [id], onDelete: Cascade)
-  parentId String?
-  replies  Comment[] @relation("NestedComments")
-
-  votes Vote[]
+  votes     Vote[]   
 }
 
 model Vote {
-  id String @id @default(uuid())
-  value Int // 1 ou -1
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String
-
+  id        String   @id @default(uuid())
+  value     Int      // 1 ou -1
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  postId    String?  // <--- AGORA É OPCIONAL (?)
   post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId    String?
-  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  commentId String?
 
-  @@unique([userId, postId])
-  @@unique([userId, commentId])
+  commentId String?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  // Garante que o usuário só vota uma vez por post OU por comentário
+  @@unique([userId, postId, commentId]) 
 }
