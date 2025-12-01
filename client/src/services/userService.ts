@@ -2,12 +2,17 @@ import api from "./api";
 import { Post } from "./postsService";
 import { Project } from "./projectService";
 
+// Tipo para a lista da Comunidade
 export interface User {
   id: string;
   name: string;
   username: string;
   avatarUrl?: string;
   interestTags: string[];
+  // Campos novos da recomendação
+  commonTags?: number;
+  commonConnections?: number;
+  score?: number;
   _count?: {
     followedBy: number;
   };
@@ -38,28 +43,26 @@ export interface UpdateProfileData {
 }
 
 export const userService = {
-  // 1. Lista todos (Comunidade)
-  getAll: async () => {
-    const { data } = await api.get<User[]>('/users');
+  // 1. Lista Comunidade (Aceita Filtro)
+  getAll: async (type: 'foryou' | 'following' = 'foryou') => {
+    const { data } = await api.get<User[]>(`/users?type=${type}`);
     return data;
   },
 
-  // 2. Busca perfil detalhado
+  // 2. Perfil Detalhado
   getByUsername: async (username: string) => {
     const { data } = await api.get<UserProfile>(`/users/${username}`);
     return data;
   },
 
-  // 3. Busca Posts (CORRIGIDO PARA A ROTA DO SOCIAL CONTROLLER)
+  // 3. Posts do Usuário
   getUserPosts: async (username: string) => {
-    // <--- MUDANÇA AQUI: Era /users/.../posts, agora é /social/posts/user/...
     const { data } = await api.get<Post[]>(`/social/posts/user/${username}`);
     return data;
   },
 
-  // 4. Busca Projetos (CORRIGIDO PARA A ROTA DO PROJECT CONTROLLER)
+  // 4. Projetos do Usuário
   getUserProjects: async (username: string) => {
-    // <--- MUDANÇA AQUI: Era /users/.../projects, agora é /projects/user/...
     const { data } = await api.get<Project[]>(`/projects/user/${username}`);
     return data;
   },
@@ -69,9 +72,9 @@ export const userService = {
     await api.post(`/users/${username}/follow`);
   },
 
+  // 6. Atualizar Perfil
   updateProfile: async (data: UpdateProfileData) => {
     const response = await api.patch('/users/me', data);
     return response.data;
   }
 };
-

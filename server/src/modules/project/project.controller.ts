@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Req, Query, ValidationPipe, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Req, Query, ValidationPipe, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { JwtGuard } from '../jwt/jwt.guard';
 import { ProjectService } from './project.service';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -17,13 +17,19 @@ export class ProjectController {
     return this.projectService.create(req.user.id, dto);
   }
 
+  // LISTAGEM PRINCIPAL
   @Get()
   async findAll(@Req() req: any, @Query('type') type: string) {
-    const feedType = type === 'following' ? 'following' : 'foryou';
-    return this.projectService.findAllSmart(req.user.id, feedType);
+    try {
+        const listType = type === 'following' ? 'following' : 'foryou';
+        return await this.projectService.findAllDirectory(req.user.id, listType);
+    } catch (error) {
+        console.error("ERRO CRÍTICO EM GET /projects:", error); // <-- Veja o erro no terminal
+        throw new InternalServerErrorException("Erro ao listar projetos.");
+    }
   }
 
-  // --- NOVO: PROJETOS DE UM USUÁRIO (ANTES do :id) ---
+  // PERFIL
   @Get('user/:username')
   async findByUser(@Param('username') username: string) {
      const user = await this.prisma.user.findUnique({ where: { username } });
@@ -37,7 +43,6 @@ export class ProjectController {
      });
   }
 
-  // Rota Genérica (Fica depois)
   @Get(':id')
   async findOne(@Param('id') id: string, @Req() req: any) {
     return this.projectService.findOne(id, req.user.id);

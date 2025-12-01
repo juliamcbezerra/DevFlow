@@ -127,7 +127,7 @@ export default function PostDetailsPage() {
                             </div>
                             <div className="flex items-center gap-2 text-xs">
                                 {post.project ? (
-                                    <Link to={`/project/${post.project.slug}`} className="text-violet-400 font-bold uppercase tracking-wider hover:underline">
+                                    <Link to={`/projects/${post.project.slug}`} className="text-violet-400 font-bold uppercase tracking-wider hover:underline">
                                         c/{post.project.slug}
                                     </Link>
                                 ) : (

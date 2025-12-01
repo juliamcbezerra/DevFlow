@@ -1,28 +1,28 @@
 import { useState, useEffect } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { Sidebar } from "../components/layout/Sidebar";
-import { Users, Hash, Search, ArrowRight } from "lucide-react";
-import { projectService } from "../services/projectService";
+import { CreateProjectModal } from "../components/projects/CreateProjectModal";
+import { projectService, Project } from "../services/projectService";
+import { 
+    FolderGit2, Sparkles, CheckCircle2, Users, MessageSquare, 
+    Plus, ArrowRight 
+} from "lucide-react";
 
-const TAG_FILTERS = ["Todos", "Javascript", "React", "Node", "Python", "DevOps", "AI"];
-
-export default function ProjectsListPage() {
-  const [searchParams] = useSearchParams();
-  const activeTab = searchParams.get('type') || 'foryou';
+export default function ProjectsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('type') || 'foryou'; // Padrão 'foryou'
   
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeTagFilter, setActiveTagFilter] = useState("Todos");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    async function loadProjects() {
+    async function loadData() {
         setLoading(true);
         try {
-            // USANDO O SERVICE AQUI
-            // O 'as' garante a tipagem correta para a função
-            const data = await projectService.getAll(activeTab as 'foryou' | 'following');
+            // @ts-ignore
+            const data = await projectService.getAll(activeTab as any);
             setProjects(data);
         } catch (error) {
             console.error(error);
@@ -30,140 +30,141 @@ export default function ProjectsListPage() {
             setLoading(false);
         }
     }
-    loadProjects();
+    loadData();
   }, [activeTab]);
 
-  const filteredProjects = projects.filter(proj => {
-      const matchesSearch = 
-        proj.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        (proj.slug && proj.slug.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      const matchesTag = activeTagFilter === "Todos" 
-        ? true 
-        : proj.tags && proj.tags.some((t: string) => t.toLowerCase() === activeTagFilter.toLowerCase());
-
-      return matchesSearch && matchesTag;
-  });
+  const handleTabChange = (type: string) => {
+      setSearchParams({ type });
+  };
 
   return (
     <AppShell>
       <Sidebar />
 
-      <div className="flex-1 min-w-0 pb-20 overflow-y-auto no-scrollbar h-full">
-        <div className="max-w-[1000px] px-4 space-y-8">
-            
-            {/* Header + Busca */}
-            <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight">
-                        {activeTab === 'foryou' ? '✨ Projetos Recomendados' : '📂 Meus Projetos'}
-                    </h1>
-                    <p className="text-zinc-400 mt-2">
-                        {activeTab === 'foryou' ? 'Descubra comunidades baseadas nos seus interesses.' : 'Gerencie as comunidades que você participa.'}
-                    </p>
-                </div>
-
-                <div className="relative group w-full md:w-72">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-zinc-500 group-focus-within:text-violet-500 transition-colors" />
-                    </div>
-                    <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="block w-full pl-10 pr-3 py-2.5 border border-zinc-800 rounded-xl leading-5 bg-zinc-950/50 text-zinc-300 placeholder-zinc-500 focus:outline-none focus:bg-zinc-900 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 sm:text-sm transition-all shadow-sm"
-                        placeholder="Buscar projetos..."
-                    />
-                </div>
+      <div className="flex-1 min-w-0 pb-20 pt-6 px-4 max-w-6xl mx-auto w-full">
+        
+        {/* Header */}
+        <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+            <div>
+                <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                    <FolderGit2 size={28} className="text-violet-500"/> Projetos
+                </h1>
+                <p className="text-zinc-400 mt-2">Explore iniciativas da comunidade e colabore.</p>
             </div>
+            <button 
+                onClick={() => setIsModalOpen(true)}
+                className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-violet-900/20 flex items-center gap-2"
+            >
+                <Plus size={18}/> Novo Projeto
+            </button>
+        </div>
 
-            {/* Filtros de Tags */}
-            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                {TAG_FILTERS.map(tag => (
-                    <button 
-                        key={tag}
-                        onClick={() => setActiveTagFilter(tag)}
-                        className={`
-                            px-4 py-1.5 rounded-full text-xs font-bold transition-all border whitespace-nowrap
-                            ${activeTagFilter === tag 
-                                ? "bg-violet-500/10 border-violet-500/50 text-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.15)]" 
-                                : "bg-zinc-900/50 border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300"}
-                        `}
-                    >
-                        {tag}
-                    </button>
-                ))}
+        {/* Grid de Projetos */}
+        {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1,2,3,4,5,6].map(i => <div key={i} className="h-80 bg-zinc-900/40 rounded-2xl animate-pulse border border-zinc-800"></div>)}
             </div>
+        ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {projects.map(project => (
+                    <div key={project.id} className="relative bg-zinc-950/30 border border-zinc-800/60 rounded-3xl flex flex-col hover:border-zinc-700 transition-all duration-300 group overflow-hidden shadow-lg hover:shadow-xl hover:shadow-black/40 h-full">
+                        
+                        {/* 1. BANNER (Gradiente Ciano/Azul) */}
+                        <div className="h-24 w-full bg-linear-to-b from-cyan-900/20 to-transparent relative shrink-0">
+                        </div>
 
-            {/* Grid de Projetos */}
-            {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {[1,2,3,4,5,6].map(i => <div key={i} className="h-72 bg-zinc-900/40 border border-zinc-800/60 rounded-2xl animate-pulse"></div>)}
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {filteredProjects.map((proj) => (
-                        <div key={proj.id} className="group relative bg-zinc-900/40 backdrop-blur-sm border border-zinc-800/60 rounded-2xl p-6 flex flex-col items-center text-center hover:bg-zinc-900/60 hover:border-zinc-700 transition-all duration-300 hover:-translate-y-1 shadow-lg hover:shadow-xl hover:shadow-black/20">
+                        {/* Conteúdo */}
+                        <div className="px-6 pb-6 flex flex-col items-center text-center -mt-12 flex-1">
                             
-                            <div className="absolute inset-0 bg-linear-to-br from-violet-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 rounded-2xl transition-opacity duration-500 pointer-events-none"></div>
+                            {/* 2. ÍCONE (Quadrado) */}
+                            <Link to={`/project/${project.slug || project.id}`} className="relative z-10 shrink-0">
+                                <div className="w-24 h-24 rounded-2xl mb-4 p-1 bg-zinc-950 shadow-2xl ring-1 ring-zinc-800 group-hover:ring-zinc-600 transition-all flex items-center justify-center">
+                                    {project.avatarUrl ? (
+                                        <img src={project.avatarUrl} className="w-full h-full object-cover rounded-xl" />
+                                    ) : (
+                                        <div className="w-full h-full bg-zinc-900 rounded-xl flex items-center justify-center text-3xl font-bold text-zinc-700 uppercase">
+                                            {project.name[0]}
+                                        </div>
+                                    )}
+                                </div>
+                            </Link>
+                            
+                            {/* Nome e Slug (Altura mínima para alinhar) */}
+                            <div className="mb-4 w-full min-h-[50px]">
+                                <Link to={`/project/${project.slug || project.id}`} className="font-bold text-white text-xl hover:text-cyan-400 transition-colors block truncate">
+                                    {project.name}
+                                </Link>
+                                <span className="text-zinc-500 text-xs font-mono bg-zinc-900/50 px-2 py-0.5 rounded border border-zinc-800/50">c/{project.slug}</span>
+                            </div>
 
-                            {/* Avatar */}
-                            <div className="relative mb-4">
-                                {proj.avatarUrl ? (
-                                    <img src={proj.avatarUrl} alt={proj.name} className="w-16 h-16 rounded-2xl ring-4 ring-zinc-950/80 object-cover relative z-10 shadow-lg group-hover:scale-105 transition-transform duration-300" />
+                            {/* Descrição (Fixo) */}
+                            <p className="text-zinc-400 text-sm mb-6 line-clamp-2 min-h-10 px-2 leading-relaxed">
+                                {project.description || "Sem descrição definida para este projeto."}
+                            </p>
+
+                            {/* 3. STATS */}
+                            <div className="flex items-center gap-4 text-xs font-medium text-zinc-400 mb-6 w-full justify-center">
+                                <div className="flex items-center gap-1.5 bg-zinc-900/80 px-3 py-1.5 rounded-lg border border-zinc-800">
+                                    <Users size={12} className="text-cyan-500"/>
+                                    <span>{project._count.members}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 bg-zinc-900/80 px-3 py-1.5 rounded-lg border border-zinc-800">
+                                    <MessageSquare size={12} className="text-violet-500"/>
+                                    <span>{project._count.posts}</span>
+                                </div>
+                            </div>
+
+                            {/* 4. TAGS (Espaço Reservado Fixo) */}
+                            <div className="w-full min-h-[30px] flex items-start justify-center mb-6">
+                                {activeTab === 'foryou' && project.matchingTags && project.matchingTags > 0 ? (
+                                    <span className="flex items-center gap-1 text-[10px] font-bold text-cyan-300 bg-cyan-500/10 py-1 px-3 rounded-md border border-cyan-500/20">
+                                        <Sparkles size={10}/> {project.matchingTags} Tags compatíveis
+                                    </span>
                                 ) : (
-                                    <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-zinc-800 to-zinc-900 border border-zinc-700 flex items-center justify-center text-2xl font-bold text-white shadow-lg ring-4 ring-zinc-950/80 relative z-10 group-hover:scale-105 transition-transform duration-300">
-                                        {proj.name[0]}
+                                    <div className="flex flex-wrap justify-center gap-1.5 w-full overflow-hidden h-full">
+                                        {project.tags.slice(0, 3).map((t) => (
+                                            <span key={t} className="text-[10px] px-2 py-0.5 bg-zinc-900 text-zinc-500 border border-zinc-800 rounded-md">
+                                                #{t}
+                                            </span>
+                                        ))}
                                     </div>
                                 )}
                             </div>
 
-                            <h3 className="text-lg font-bold text-zinc-100 group-hover:text-white transition-colors truncate w-full px-2">{proj.name}</h3>
-                            <p className="text-violet-400 text-[10px] font-bold uppercase tracking-wider mb-3">c/{proj.slug}</p>
-
-                            <p className="text-sm text-zinc-500 line-clamp-2 mb-4 h-10 w-full px-2 leading-tight">
-                                {proj.description || "Comunidade focada em desenvolvimento."}
-                            </p>
-
-                            {/* Tags */}
-                            <div className="flex flex-wrap justify-center gap-1.5 mb-5 w-full min-h-6">
-                                {proj.tags && proj.tags.length > 0 ? (
-                                    proj.tags.slice(0, 3).map((tag: string) => (
-                                        <span key={tag} className="text-[10px] font-medium bg-zinc-800/80 text-zinc-400 border border-zinc-700/50 px-2 py-0.5 rounded-md hover:border-violet-500/30 hover:text-violet-300 transition-colors cursor-default">#{tag}</span>
-                                    ))
-                                ) : (
-                                    <span className="text-[10px] text-zinc-600 italic">Geral</span>
-                                )}
-                            </div>
-
-                            <div className="w-full h-px bg-zinc-800/50 mb-4"></div>
-
-                            <div className="w-full flex items-center justify-between">
-                                <div className="text-left flex flex-col">
-                                    <span className="text-sm font-bold text-white">{proj._count?.members || 0}</span>
-                                    <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-wide">Membros</span>
-                                </div>
-                                
-                                <Link to={`/projects/${proj.slug || proj.id}`}>
-                                    <button className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-bold shadow-lg shadow-white/5 hover:scale-105 transition-all active:scale-95 flex items-center gap-1">
-                                        Ver <ArrowRight size={12} />
-                                    </button>
-                                </Link>
-                            </div>
+                            {/* Botão de Ação (No fundo) */}
+                            <Link 
+                                to={`/projects/${project.slug || project.id}`}
+                                className={`mt-auto w-full py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                                    activeTab === 'following'
+                                    ? "bg-zinc-950 text-zinc-400 border border-zinc-800 hover:text-white"
+                                    : "bg-zinc-900 text-zinc-300 border border-zinc-800 hover:bg-zinc-800 hover:text-white hover:border-zinc-700 group-hover:shadow-lg"
+                                }`}
+                            >
+                                {activeTab === 'following' ? 'Acessar Comunidade' : <><ArrowRight size={14}/> Ver Projeto</>}
+                            </Link>
                         </div>
-                    ))}
-                </div>
-            )}
+                    </div>
+                ))}
+            </div>
+        )}
 
-            {!loading && filteredProjects.length === 0 && (
-                <div className="text-center py-16 border border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20">
-                    <div className="inline-block p-3 bg-zinc-900 rounded-full mb-3"><Hash size={24} className="text-zinc-500" /></div>
-                    <h3 className="text-zinc-300 font-bold">Nenhum projeto encontrado</h3>
-                    <p className="text-sm text-zinc-500 mt-1">Tente buscar por outro termo ou tag.</p>
-                </div>
-            )}
-        </div>
+        {!loading && projects.length === 0 && (
+            <div className="text-center py-24 opacity-50 border border-dashed border-zinc-800 rounded-3xl bg-zinc-900/20">
+                <FolderGit2 size={64} className="mx-auto mb-6 text-zinc-700"/>
+                <p className="text-zinc-500 font-medium text-lg">
+                    {activeTab === 'following' ? "Você não participa de nenhum projeto." : "Nenhum projeto encontrado."}
+                </p>
+                {activeTab === 'following' && (
+                    <button onClick={() => setIsModalOpen(true)} className="mt-4 text-violet-400 hover:underline">
+                        Criar um novo projeto
+                    </button>
+                )}
+            </div>
+        )}
+
       </div>
+
+      <CreateProjectModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </AppShell>
   );
 }

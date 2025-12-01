@@ -25,11 +25,10 @@ export class SocialController {
     return this.socialService.findAllSmart(req.user.id, feedType);
   }
 
-  // Novo Endpoint: Trending Tags
+  // Widget: Trending Tags
   @Get('tags/trending')
   async getTrendingTags() {
     try {
-        // Tenta query nativa para contar tags dentro de arrays
         const result = await this.prisma.$queryRaw`
             SELECT tag, count(*)::int as count 
             FROM (SELECT unnest(tags) as tag FROM "Project") t 
@@ -37,36 +36,31 @@ export class SocialController {
         `;
         return result; 
     } catch {
-        // Fallback se o banco não suportar ou estiver vazio
         return []; 
     }
   }
 
-  // Novo Endpoint: Sugestões de Usuários
+  // Widget: Sugestões
   @Get('users/suggestions')
   async getWhoToFollow(@Req() req: any) {
-      // Retorna 5 usuários que eu não sigo (exceto eu mesmo)
       const following = await this.prisma.follows.findMany({
           where: { followerId: req.user.id },
           select: { followingId: true }
       });
       const followingIds = following.map(f => f.followingId);
 
-      const users = await this.prisma.user.findMany({
-          where: { 
-              id: { notIn: [req.user.id, ...followingIds] },
-          },
+      return this.prisma.user.findMany({
+          where: { id: { notIn: [req.user.id, ...followingIds] } },
           take: 5,
           orderBy: { createdAt: 'desc' },
           select: { id: true, name: true, username: true, avatarUrl: true }
       });
-      return users;
   }
 
   // --- 2. BUSCA POR USUÁRIO ---
 
   @Get('posts/user/:username')
-  async findByUser(@Param('username') username: string, @Req() req: any) { // Adicionado req
+  async findByUser(@Param('username') username: string, @Req() req: any) {
     const user = await this.prisma.user.findUnique({ where: { username } });
     if (!user) throw new NotFoundException('Usuário não encontrado');
 
@@ -76,15 +70,15 @@ export class SocialController {
       include: {
         author: { select: { id: true, name: true, username: true, avatarUrl: true } },
         project: { select: { id: true, name: true, slug: true } },
-        votes: { select: { value: true, userId: true } }, // Traz userId do voto
+        votes: { select: { value: true, userId: true } }, // Importante: trazer userId
         _count: { select: { comments: true } }
       }
     });
 
-    // Mapeamento com userVote correto
     return posts.map(post => {
         const score = post.votes.reduce((acc, curr) => acc + curr.value, 0);
-        const userVote = post.votes.find(v => v.userId === req.user.id)?.value || 0; // Calcula estado
+        // Calcula se EU votei neste post
+        const userVote = post.votes.find(v => v.userId === req.user.id)?.value || 0;
         
         const { votes, ...rest } = post;
         return { 
@@ -95,7 +89,7 @@ export class SocialController {
     });
   }
 
-  // --- 3. CRUD DE POSTS E PROJETOS ---
+  // --- 3. PROJETOS E POSTS ---
 
   @Post('projects/:projectId/posts')
   async createPost(@Param('projectId') projectId: string, @Body(ValidationPipe) dto: CreatePostDto, @Req() req: any) {
@@ -103,9 +97,12 @@ export class SocialController {
   }
 
   @Get('projects/:projectId/posts')
-  async findAllByProject(@Param('projectId') projectId: string) {
-    return this.socialService.findAllByProject(projectId);
+  async findAllByProject(@Param('projectId') projectId: string, @Req() req: any) {
+    // CORREÇÃO CRÍTICA: Passando req.user.id para o service saber quem está vendo
+    return this.socialService.findAllByProject(projectId, req.user.id);
   }
+
+  // --- 4. INTERAÇÕES ---
 
   @Post('vote')
   async vote(@Body() body: { postId: string; value: number }, @Req() req: any) {
@@ -124,8 +121,9 @@ export class SocialController {
   }
 
   @Get('posts/:postId')
-  async getPost(@Param('postId') postId: string) {
-    return this.socialService.findPostById(postId);
+  async getPost(@Param('postId') postId: string, @Req() req: any) {
+    // Passando req.user.id para saber se votei no post individual
+    return this.socialService.findPostById(postId, req.user.id);
   }
 
   @Patch('posts/:postId')

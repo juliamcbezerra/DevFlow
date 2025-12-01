@@ -26,18 +26,16 @@ export class SocialService {
     return this.prisma.post.create({
       data,
       include: {
-        author: {
-          select: { id: true, name: true, username: true, avatarUrl: true }
-        }
+        author: { select: { id: true, name: true, username: true, avatarUrl: true } }
       }
     });
   }
 
-  // --- 2. FEED INTELIGENTE ---
+  // --- 2. FEED INTELIGENTE (CORRIGIDO) ---
   async findAllSmart(userId: string, type: 'foryou' | 'following') {
+    // CORREÇÃO: Removemos o 'include'. O campo interestTags vem por padrão.
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { following: true, followedProjects: true }
     });
 
     if (!user) throw new Error('Usuário não encontrado');
@@ -45,14 +43,26 @@ export class SocialService {
     let whereClause: any = { deletedAt: null };
 
     if (type === 'following') {
-      const followingIds = user.following.map(f => f.followingId);
-      const projectIds = user.followedProjects.map(p => p.projectId);
-      
+      // 1. Buscar quem eu sigo
+      const following = await this.prisma.follows.findMany({
+          where: { followerId: userId },
+          select: { followingId: true }
+      });
+      const followingIds = following.map(f => f.followingId);
+
+      // 2. Buscar projetos que participo
+      const memberships = await this.prisma.member.findMany({
+          where: { userId: userId },
+          select: { projectId: true }
+      });
+      const projectIds = memberships.map(m => m.projectId);
+
+      // 3. Montar Filtro
       whereClause = {
         deletedAt: null,
         OR: [
-          { authorId: { in: followingIds } },
-          { projectId: { in: projectIds } }
+          { authorId: { in: followingIds } }, 
+          { projectId: { in: projectIds } }   
         ]
       };
     }
@@ -70,12 +80,14 @@ export class SocialService {
     });
 
     const mappedPosts = posts.map(post => {
-      let score = post.votes.reduce((acc, curr) => acc + curr.value, 0);
-      let sortScore = score;
-
+      const score = post.votes.reduce((acc, curr) => acc + curr.value, 0);
       const userVote = post.votes.find(v => v.userId === userId)?.value || 0;
 
+      let sortScore = score;
+      
+      // Algoritmo de recomendação
       if (type === 'foryou' && post.project && post.project.tags) {
+         // interestTags já existe no objeto 'user'
          const matches = post.project.tags.filter(tag => user.interestTags.includes(tag)).length;
          if (matches > 0) sortScore += (matches * 5); 
       }
@@ -83,7 +95,7 @@ export class SocialService {
       const { votes, ...rest } = post;
       
       return { 
-        ...rest,
+        ...rest, 
         userVote, 
         _count: { comments: post._count.comments, votes: score },
         sortScore 
@@ -98,22 +110,28 @@ export class SocialService {
   }
 
   // --- 3. FEED DO PROJETO ---
-  async findAllByProject(projectId: string, userId?: string) {
+  async findAllByProject(projectId: string, userId: string) {
     const posts = await this.prisma.post.findMany({
       where: { projectId: projectId, deletedAt: null },
       orderBy: { createdAt: 'desc' },
       include: {
         author: { select: { id: true, name: true, username: true, avatarUrl: true } },
         project: { select: { id: true, name: true, slug: true } },
-        votes: { select: { value: true } },
+        votes: { select: { value: true, userId: true } },
         _count: { select: { comments: true } }
       },
     });
 
     return posts.map(post => {
         const score = post.votes.reduce((acc, curr) => acc + curr.value, 0);
+        const userVote = post.votes.find(v => v.userId === userId)?.value || 0;
+
         const { votes, ...rest } = post;
-        return { ...rest, _count: { comments: post._count.comments, votes: score } };
+        return { 
+            ...rest, 
+            userVote,
+            _count: { comments: post._count.comments, votes: score } 
+        };
     });
   }
 
@@ -138,15 +156,13 @@ export class SocialService {
     });
   }
 
-  // --- 5. COMENTÁRIOS (CORRIGIDO) ---
-  
+  // --- 5. COMENTÁRIOS ---
   async createComment(userId: string, postId: string, dto: CreateCommentDto) {
     return this.prisma.comment.create({
       data: {
         content: dto.content,
         postId,
         authorId: userId,
-        // CORREÇÃO 1: Conecta o parentId se ele existir no DTO
         parentId: dto.parentId || undefined, 
       },
       include: {
@@ -155,29 +171,24 @@ export class SocialService {
     });
   }
 
-  // Busca plana de todos os comentários do post
   async findCommentsByPost(postId: string) {
     return this.prisma.comment.findMany({
       where: { postId },
-      orderBy: { createdAt: 'asc' }, // Ordem cronológica para montar a árvore corretamente
+      orderBy: { createdAt: 'asc' },
       include: {
         author: { select: { id: true, name: true, username: true, avatarUrl: true } }
       }
     });
   }
 
-  // Transforma lista plana em árvore recursiva
   private buildCommentTree(comments: any[]): CommentTreeDTO[] {
     const childrenMap = new Map<string | null, any[]>();
-
-    // Agrupa por pai
     for (const comment of comments) {
       const parentId = comment.parentId ?? null;
       if (!childrenMap.has(parentId)) childrenMap.set(parentId, []);
       childrenMap.get(parentId)!.push(comment);
     }
 
-    // Função recursiva para montar galhos
     const buildBranch = (parentId: string | null): CommentTreeDTO[] => {
       const nodes = (childrenMap.get(parentId) ?? []) as any[];
       return nodes.map((comment) => ({
@@ -187,14 +198,13 @@ export class SocialService {
         author: {
           id: comment.author.id,
           name: comment.author.name,
-          username: comment.author.username, // CORREÇÃO 2: Passa o username
+          username: comment.author.username, 
           avatarUrl: comment.author.avatarUrl 
         },
-        replies: buildBranch(comment.id) // Recursão
+        replies: buildBranch(comment.id)
       }));
     };
-
-    return buildBranch(null); // Começa pelos raízes (parentId = null)
+    return buildBranch(null);
   }
 
   async getCommentsTree(postId: string) {
@@ -203,31 +213,32 @@ export class SocialService {
   }
 
   // --- 6. UTILITÁRIOS ---
-  async findPostById(postId: string) {
+  async findPostById(postId: string, userId?: string) {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
       include: {
         author: { select: { id: true, name: true, username: true, avatarUrl: true } },
-        project: { select: { id: true, name: true, slug: true } }, // Inclui dados do projeto
-        votes: { select: { value: true } },
+        project: { select: { id: true, name: true, slug: true } },
+        votes: { select: { value: true, userId: true } },
         _count: { select: { comments: true } },
       },
     });
 
     if (!post) throw new NotFoundException('Post não encontrado');
 
-    // Calcula score antes de retornar
     const score = post.votes.reduce((acc, curr) => acc + curr.value, 0);
+    const userVote = userId ? (post.votes.find(v => v.userId === userId)?.value || 0) : 0;
+
     const { votes, ...rest } = post;
     
     return { 
         ...rest, 
+        userVote,
         _count: { comments: post._count.comments, votes: score } 
     };
   }
 
   async updatePost(userId: string, postId: string, dto: UpdatePostDto) {
-    // ... (mantido igual)
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
     if (!post) throw new Error('Post não encontrado');
     if (post.authorId !== userId) throw new Error('Sem permissão');
@@ -239,7 +250,6 @@ export class SocialService {
   }
 
   async removePost(userId: string, postId: string) {
-    // ... (mantido igual)
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
     if (!post) throw new Error('Post não encontrado');
     if (post.authorId !== userId) throw new Error('Sem permissão');

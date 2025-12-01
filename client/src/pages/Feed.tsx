@@ -127,7 +127,7 @@ export default function FeedPage() {
                                   <img src={post.author.avatarUrl || `https://ui-avatars.com/api/?name=${post.author.name}&background=random`} className="w-8 h-8 rounded-full ring-1 ring-zinc-700 object-cover" />
                                   <div className="flex items-center gap-2 flex-wrap text-sm">
                                       {post.project ? (
-                                          <span className="font-bold text-zinc-200 hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate(`/project/${post.project.slug}`); }}>c/{post.project.name}</span>
+                                          <span className="font-bold text-zinc-200 hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate(`/projects/${post.project.slug}`); }}>c/{post.project.name}</span>
                                       ) : (
                                           <span className="font-bold text-zinc-500">Geral</span>
                                       )}

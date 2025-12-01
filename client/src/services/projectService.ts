@@ -8,19 +8,31 @@ export interface Project {
   description?: string;
   avatarUrl?: string;
   tags: string[];
+  
+  // O backend envia o owner na listagem também
+  owner: {
+    name: string;
+    username: string;
+  };
+
   _count: {
     members: number;
     posts: number;
   };
+
+  // Campo calculado pelo backend para recomendação (Para Você)
+  matchingTags?: number;
 }
 
 // Tipagem para os detalhes completos (Página do Projeto)
 export interface ProjectDetails extends Project {
   ownerId: string;
   isMember: boolean; // Flag calculada pelo backend
+  // owner já herdado de Project, mas com ID se necessário
   owner: {
-    id: string;
+    id?: string;
     name: string;
+    username: string;
     avatarUrl?: string;
   };
 }
@@ -35,7 +47,7 @@ export interface CreateProjectData {
 }
 
 export const projectService = {
-  // 1. Listar Projetos (Smart Feed)
+  // 1. Listar Projetos (Atualizado para 'foryou' e 'following')
   getAll: async (type: 'foryou' | 'following' = 'foryou') => {
     const { data } = await api.get<Project[]>(`/projects?type=${type}`);
     return data;

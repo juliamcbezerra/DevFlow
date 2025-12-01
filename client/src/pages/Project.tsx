@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom"; // Import Link
 import { AppShell } from "../components/layout/AppShell";
 import { Sidebar } from "../components/layout/Sidebar";
 import { useAuth } from "../context/AuthContext";
 import { projectService, ProjectDetails } from "../services/projectService";
 import { CreatePostWidget } from "../components/feed/CreatePostWidget"; 
+import { RichTextDisplay } from "../components/feed/RichTextDisplay"; // <--- 1. Importar RichTextDisplay
 import api from "../services/api"; 
 import { 
     Loader2, MessageCircle, ArrowBigUp, ArrowBigDown, 
@@ -16,17 +17,14 @@ const postCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80
 export default function ProjectPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   const [project, setProject] = useState<ProjectDetails | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
-  
-  const navigate = useNavigate();
-  
   const [loadingProject, setLoadingProject] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [joining, setJoining] = useState(false);
 
-  // Carregar Dados
   useEffect(() => {
     async function loadData() {
         if (!id) return;
@@ -36,7 +34,6 @@ export default function ProjectPage() {
             setProject(projData);
 
             setLoadingPosts(true);
-            // IMPORTANTE: Busca posts usando o ID retornado (caso a URL seja slug)
             const { data: postsData } = await api.get(`/social/projects/${projData.id}/posts`);
             setPosts(postsData);
         } catch (error) {
@@ -49,12 +46,10 @@ export default function ProjectPage() {
     loadData();
   }, [id]);
 
-  // Função chamada quando o Widget cria um post com sucesso
   const handleNewPost = (newPost: any) => {
-      setPosts([newPost, ...posts]); // Adiciona no topo da lista
+      setPosts([newPost, ...posts]);
   };
 
-  // Join/Leave
   const handleJoinLeave = async () => {
       if (!project) return;
       setJoining(true);
@@ -73,10 +68,33 @@ export default function ProjectPage() {
       }
   };
 
-  // Votos
-  const votePost = async (postId: string, value: number) => {
-    setPosts(prev => prev.map(p => p.id === postId ? {...p, _count: {...p._count, votes: p._count.votes + value}} : p));
-    await api.post('/social/vote', { postId, value });
+  // Voto Inteligente (Igual ao Feed)
+  const votePost = async (e: React.MouseEvent, postId: string, intent: number) => {
+    e.stopPropagation();
+    setPosts(prev => prev.map(p => {
+       if (p.id !== postId) return p;
+       const currentVote = p.userVote || 0;
+       let newVote = 0;
+       let scoreDelta = 0;
+
+       if (currentVote === intent) {
+           newVote = 0;
+           scoreDelta = -intent; 
+       } else if (currentVote === 0) {
+           newVote = intent;
+           scoreDelta = intent;
+       } else {
+           newVote = intent;
+           scoreDelta = intent * 2;
+       }
+
+       return {
+           ...p,
+           userVote: newVote,
+           _count: { ...p._count, votes: p._count.votes + scoreDelta }
+       };
+    }));
+    await api.post('/social/vote', { postId, value: intent });
   };
 
   const formatDate = (dateString: string) => {
@@ -123,7 +141,7 @@ export default function ProjectPage() {
             </div>
         </div>
 
-        {/* --- USANDO O NOVO COMPONENTE AQUI --- */}
+        {/* WIDGET CRIAR POST */}
         {project.isMember ? (
             <CreatePostWidget 
                 projectId={project.id} 
@@ -144,21 +162,38 @@ export default function ProjectPage() {
                 {posts.map((post) => (
                     <article key={post.id} className={postCardClass}>
                         <div className="flex h-full">
+                            
+                            {/* VOTOS */}
                             <div className="w-12 bg-zinc-950/30 flex flex-col items-center py-3 border-r border-zinc-800/50 gap-1 shrink-0">
-                                <button onClick={() => votePost(post.id, 1)} className="text-zinc-500 hover:text-orange-500 p-1 rounded hover:bg-zinc-800/50 transition-colors"><ArrowBigUp size={24} strokeWidth={2} /></button>
-                                <span className="font-bold text-sm text-zinc-200 my-1">{post._count?.votes || 0}</span>
-                                <button onClick={() => votePost(post.id, -1)} className="text-zinc-500 hover:text-violet-500 p-1 rounded hover:bg-zinc-800/50 transition-colors"><ArrowBigDown size={24} strokeWidth={2} /></button>
+                                <button onClick={(e) => votePost(e, post.id, 1)} className={`p-1 rounded transition-all active:scale-90 ${post.userVote === 1 ? 'text-orange-500 bg-orange-500/10' : 'text-zinc-500 hover:text-orange-500 hover:bg-zinc-800/50'}`}>
+                                    <ArrowBigUp size={24} strokeWidth={2} className={post.userVote === 1 ? 'fill-orange-500/20' : ''} />
+                                </button>
+                                <span className={`font-bold text-sm my-1 ${post.userVote !== 0 ? (post.userVote === 1 ? 'text-orange-500' : 'text-violet-500') : 'text-zinc-200'}`}>
+                                    {post._count?.votes || 0}
+                                </span>
+                                <button onClick={(e) => votePost(e, post.id, -1)} className={`p-1 rounded transition-all active:scale-90 ${post.userVote === -1 ? 'text-violet-500 bg-violet-500/10' : 'text-zinc-500 hover:text-violet-500 hover:bg-zinc-800/50'}`}>
+                                    <ArrowBigDown size={24} strokeWidth={2} className={post.userVote === -1 ? 'fill-violet-500/20' : ''} />
+                                </button>
                             </div>
+                            
+                            {/* CONTEÚDO */}
                             <div className="flex-1 p-4 cursor-pointer hover:bg-zinc-900/40 transition-colors" onClick={() => navigate(`/post/${post.id}`)}>
                                 <div className="flex items-center gap-2 mb-2 text-xs text-zinc-500">
-                                    <span className="font-bold text-zinc-300 hover:text-white cursor-pointer">@{post.author.username}</span>
+                                    <Link to={`/profile/${post.author.username}`} onClick={e => e.stopPropagation()} className="font-bold text-zinc-300 hover:text-white cursor-pointer">
+                                        @{post.author.username}
+                                    </Link>
                                     <span>•</span>
                                     <span>{formatDate(post.createdAt)}</span>
                                 </div>
-                                <div className="text-zinc-200 mb-3 text-sm whitespace-pre-wrap leading-relaxed">{post.content}</div>
+                                
+                                {/* --- 2. SUBSTITUÍDO AQUI --- */}
+                                <div className="mb-3 text-sm relative max-h-[300px] overflow-hidden mask-linear-fade">
+                                    <RichTextDisplay content={post.content} className="line-clamp-6" />
+                                </div>
+
                                 <div className="flex gap-4 text-zinc-500 text-xs font-bold">
                                     <button className="flex items-center gap-2 hover:bg-zinc-800/50 px-2 py-1 rounded transition-colors"><MessageCircle size={16}/> {post._count?.comments || 0} Comentários</button>
-                                    <button className="flex items-center gap-2 hover:bg-zinc-800/50 px-2 py-1 rounded transition-colors"><Share2 size={16}/> Compartilhar</button>
+                                    <button onClick={(e) => { e.stopPropagation(); }} className="flex items-center gap-2 hover:bg-zinc-800/50 px-2 py-1 rounded transition-colors"><Share2 size={16}/> Compartilhar</button>
                                 </div>
                             </div>
                         </div>
