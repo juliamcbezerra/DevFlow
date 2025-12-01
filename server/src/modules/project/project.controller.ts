@@ -17,19 +17,17 @@ export class ProjectController {
     return this.projectService.create(req.user.id, dto);
   }
 
-  // LISTAGEM PRINCIPAL
   @Get()
   async findAll(@Req() req: any, @Query('type') type: string) {
     try {
         const listType = type === 'following' ? 'following' : 'foryou';
         return await this.projectService.findAllDirectory(req.user.id, listType);
     } catch (error) {
-        console.error("ERRO CRÍTICO EM GET /projects:", error); // <-- Veja o erro no terminal
+        console.error("ERRO GET /projects:", error);
         throw new InternalServerErrorException("Erro ao listar projetos.");
     }
   }
 
-  // PERFIL
   @Get('user/:username')
   async findByUser(@Param('username') username: string) {
      const user = await this.prisma.user.findUnique({ where: { username } });
@@ -38,7 +36,12 @@ export class ProjectController {
      return this.prisma.project.findMany({
         where: { ownerId: user.id },
         include: {
-            _count: { select: { members: true, posts: true } }
+            _count: { 
+                select: { 
+                    members: true, 
+                    posts: { where: { deletedAt: null } } // Contagem correta
+                } 
+            }
         }
      });
   }

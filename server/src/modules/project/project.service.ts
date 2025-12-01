@@ -31,36 +31,34 @@ export class ProjectService {
     });
   }
 
-  // --- 2. LISTAGEM DE PROJETOS (CORRIGIDO) ---
+  // --- 2. LISTAGEM (DIRECTORY) ---
   async findAllDirectory(userId: string, type: 'foryou' | 'following') {
-    
-    // CORREÇÃO: Começamos com filtro vazio (sem deletedAt, pois pode não existir no banco)
     let whereClause: any = {};
 
-    // Lógica SEGUINDO (Projetos que participo)
     if (type === 'following') {
       const memberships = await this.prisma.member.findMany({
         where: { userId: userId },
         select: { projectId: true }
       });
       const projectIds = memberships.map(m => m.projectId);
-      
       whereClause.id = { in: projectIds };
     }
 
-    // Busca Projetos
     const projects = await this.prisma.project.findMany({
       where: whereClause,
       include: {
         owner: { select: { name: true, username: true } },
-        _count: { select: { members: true, posts: true } }
+        _count: { 
+            select: { 
+                members: true, 
+                posts: { where: { deletedAt: null } } // Ignora deletados
+            } 
+        }
       },
-      // Ordenação segura
       orderBy: type === 'following' ? { createdAt: 'desc' } : undefined,
       take: 100
     });
 
-    // Lógica PARA VOCÊ (Recomendação)
     if (type === 'foryou') {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
@@ -72,13 +70,10 @@ export class ProjectService {
             let score = 0;
             let matchingTags = 0;
 
-            // Pontua se tiver tags em comum
             if (proj.tags && userTags.length > 0) {
                 matchingTags = proj.tags.filter(tag => userTags.includes(tag)).length;
                 score += (matchingTags * 10);
             }
-
-            // Pontua por popularidade
             score += (proj._count.posts * 1);
             score += (proj._count.members * 2);
 
@@ -89,25 +84,55 @@ export class ProjectService {
     return projects;
   }
 
-  // Compatibilidade
   async findAllSmart(userId: string, type: 'foryou' | 'following') {
       return this.findAllDirectory(userId, type);
   }
 
-  // --- 3. DETALHES ---
+  // --- 3. DETALHES COM STAFF ---
   async findOne(idOrSlug: string, userId: string) {
+    // 1. Busca Projeto Base
     const project = await this.prisma.project.findFirst({
       where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
       include: {
-        owner: { select: { id: true, name: true, avatarUrl: true } },
-        _count: { select: { members: true, posts: true } },
-        members: { where: { userId: userId }, take: 1 }
+        owner: { select: { id: true, name: true, username: true, avatarUrl: true } },
+        _count: { 
+            select: { 
+                members: true, 
+                posts: { where: { deletedAt: null } } 
+            } 
+        }
       }
     });
 
     if (!project) throw new NotFoundException('Projeto não encontrado');
 
-    return { ...project, isMember: project.members.length > 0 };
+    // 2. Verifica se EU sou membro
+    const membership = await this.prisma.member.findUnique({
+        where: { userId_projectId: { userId, projectId: project.id } }
+    });
+
+    // 3. Busca a Staff (OWNER e ADMIN) para a Sidebar
+    const staffMembers = await this.prisma.member.findMany({
+        where: {
+            projectId: project.id,
+            role: { in: ['OWNER', 'ADMIN'] }
+        },
+        include: {
+            user: { select: { id: true, name: true, username: true, avatarUrl: true } }
+        },
+        // Ordena para OWNER aparecer primeiro, depois ADMINs
+        orderBy: { role: 'desc' } 
+    });
+
+    return {
+      ...project,
+      isMember: !!membership,
+      // Mapeia para o formato que o frontend espera
+      staff: staffMembers.map(m => ({
+          ...m.user,
+          role: m.role
+      }))
+    };
   }
 
   // --- 4. JOIN / LEAVE ---
@@ -144,5 +169,13 @@ export class ProjectService {
        where: { userId_projectId: { userId, projectId: project.id } }
     });
     return { message: 'Saiu com sucesso.' };
+  }
+
+  // --- 5. UTILS ---
+  async getPopularTags() {
+    try {
+        const rows: any[] = await this.prisma.$queryRaw`SELECT tag, COUNT(*)::int AS count FROM (SELECT UNNEST("tags") AS tag FROM "Project") t GROUP BY tag ORDER BY count DESC LIMIT 10`;
+        return rows.map(r => ({ tag: r.tag, count: Number(r.count) }));
+    } catch (e) { return []; }
   }
 }

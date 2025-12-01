@@ -8,11 +8,13 @@ import {
 import api from "../services/api";
 import { userService } from "../services/userService";
 import { RichTextDisplay } from "../components/feed/RichTextDisplay";
+import { PostOptions } from "../components/feed/PostOptions"; 
 
 const postCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden hover:border-zinc-700/80 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-violet-900/5";
 const widgetCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden shadow-sm";
 
 export default function FeedPage() {
+  // ... (useSearchParams, navigate, states mantidos iguais) ...
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const activeTab = searchParams.get('type') || 'foryou';
@@ -22,17 +24,14 @@ export default function FeedPage() {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // ... (useEffects de loadFeed e widgets mantidos iguais) ...
   useEffect(() => {
     async function loadFeed() {
         setIsLoading(true);
         try {
             const { data } = await api.get(`/social/posts?type=${activeTab}`);
             setPosts(data);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (error) { console.error(error); } finally { setIsLoading(false); }
     }
     loadFeed();
   }, [activeTab]);
@@ -42,30 +41,15 @@ export default function FeedPage() {
     api.get('/social/users/suggestions').then(res => setSuggestions(res.data)).catch(() => {});
   }, []);
 
+  // ... (funções votePost e handleFollow mantidas iguais) ...
   const votePost = async (e: React.MouseEvent, postId: string, intent: number) => {
       e.stopPropagation(); 
       setPosts(prev => prev.map(p => {
          if (p.id !== postId) return p;
          const currentVote = p.userVote || 0;
-         let newVote = 0;
-         let scoreDelta = 0;
-
-         if (currentVote === intent) {
-             newVote = 0;
-             scoreDelta = -intent; 
-         } else if (currentVote === 0) {
-             newVote = intent;
-             scoreDelta = intent;
-         } else {
-             newVote = intent;
-             scoreDelta = intent * 2;
-         }
-
-         return {
-             ...p,
-             userVote: newVote,
-             _count: { ...p._count, votes: p._count.votes + scoreDelta }
-         };
+         let newVote = currentVote === intent ? 0 : intent;
+         let scoreDelta = currentVote === intent ? -intent : (currentVote === 0 ? intent : intent * 2);
+         return { ...p, userVote: newVote, _count: { ...p._count, votes: p._count.votes + scoreDelta } };
       }));
       await api.post('/social/vote', { postId, value: intent });
   };
@@ -81,13 +65,18 @@ export default function FeedPage() {
     try { return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(dateString)); } catch (e) { return ""; }
   };
 
+  // --- 2. NOVA FUNÇÃO: Remover post da lista visualmente ---
+  const handleDeletePost = (postId: string) => {
+      setPosts(prev => prev.filter(p => p.id !== postId));
+  };
+
   return (
     <AppShell>
       <Sidebar />
 
       <div className="flex-1 min-w-0 max-w-[800px] space-y-6 pb-20"> 
         
-        {/* Header */}
+        {/* Header (Mantido igual) */}
         <div className="flex items-center gap-3 mb-2 px-2 pt-2">
             {activeTab === 'foryou' && <div className="p-1.5 bg-orange-500/10 rounded-lg"><Sparkles size={18} className="text-orange-500"/></div>}
             {activeTab === 'following' && <div className="p-1.5 bg-violet-500/10 rounded-lg"><UserPlus size={18} className="text-violet-500"/></div>}
@@ -110,7 +99,7 @@ export default function FeedPage() {
                     <article key={post.id} className={postCardClass}>
                       <div className="flex h-full">
                           
-                          {/* VOTOS */}
+                          {/* Coluna Votos (Mantida) */}
                           <div className="w-12 bg-zinc-950/30 flex flex-col items-center py-3 border-r border-zinc-800/50 gap-1 shrink-0">
                               <button onClick={(e) => votePost(e, post.id, 1)} className={`p-1 rounded transition-all active:scale-90 ${post.userVote === 1 ? 'text-orange-500 bg-orange-500/10' : 'text-zinc-500 hover:text-orange-500 hover:bg-zinc-800/50'}`}>
                                   <ArrowBigUp size={24} strokeWidth={2} className={post.userVote === 1 ? 'fill-orange-500/20' : ''} />
@@ -121,26 +110,35 @@ export default function FeedPage() {
                               </button>
                           </div>
 
-                          {/* CONTEÚDO */}
+                          {/* Conteúdo */}
                           <div className="flex-1 p-4 sm:p-5 cursor-pointer hover:bg-zinc-900/40 transition-colors" onClick={() => navigate(`/post/${post.id}`)} >
-                              <div className="flex items-center gap-3 mb-3">
-                                  <img src={post.author.avatarUrl || `https://ui-avatars.com/api/?name=${post.author.name}&background=random`} className="w-8 h-8 rounded-full ring-1 ring-zinc-700 object-cover" />
-                                  <div className="flex items-center gap-2 flex-wrap text-sm">
-                                      {post.project ? (
-                                          <span className="font-bold text-zinc-200 hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate(`/projects/${post.project.slug}`); }}>c/{post.project.name}</span>
-                                      ) : (
-                                          <span className="font-bold text-zinc-500">Geral</span>
-                                      )}
-                                      <span className="text-zinc-600 text-[10px]">•</span>
-                                      <Link to={`/profile/${post.author.username}`} onClick={e => e.stopPropagation()} className="text-zinc-400 hover:text-white transition-colors">@{post.author.username}</Link>
-                                      <span className="text-zinc-600 text-[10px]">•</span>
-                                      <span className="text-zinc-500 text-xs">{formatDate(post.createdAt)}</span>
+                              
+                              {/* HEADER DO POST */}
+                              <div className="flex items-start justify-between mb-3">
+                                  <div className="flex items-center gap-3">
+                                      <img src={post.author.avatarUrl || `https://ui-avatars.com/api/?name=${post.author.name}&background=random`} className="w-8 h-8 rounded-full ring-1 ring-zinc-700 object-cover" />
+                                      <div className="flex items-center gap-2 flex-wrap text-sm">
+                                          {post.project ? (
+                                              <span className="font-bold text-zinc-200 hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate(`/projects/${post.project.slug}`); }}>c/{post.project.name}</span>
+                                          ) : (
+                                              <span className="font-bold text-zinc-500">Geral</span>
+                                          )}
+                                          <span className="text-zinc-600 text-[10px]">•</span>
+                                          <Link to={`/profile/${post.author.username}`} onClick={e => e.stopPropagation()} className="text-zinc-400 hover:text-white transition-colors">@{post.author.username}</Link>
+                                          <span className="text-zinc-600 text-[10px]">•</span>
+                                          <span className="text-zinc-500 text-xs">{formatDate(post.createdAt)}</span>
+                                      </div>
                                   </div>
+
+                                  {/* --- 3. MENU DE OPÇÕES (DELETE) AQUI --- */}
+                                  <PostOptions 
+                                    postId={post.id} 
+                                    authorId={post.author.id} // Precisa garantir que o backend envie o author.id
+                                    onDeleteSuccess={handleDeletePost}
+                                  />
                               </div>
                               
-                              {/* --- 2. SUBSTITUIÇÃO DO CONTEÚDO AQUI --- */}
                               <div className="mb-4 text-sm relative max-h-[300px] overflow-hidden mask-linear-fade">
-                                {/* Usando o RichTextDisplay com line-clamp simulado ou max-height */}
                                 <RichTextDisplay content={post.content} className="line-clamp-6" />
                               </div>
                               
@@ -156,7 +154,6 @@ export default function FeedPage() {
                       </div>
                     </article>
                 ))}
-                {/* Empty State */}
                 {posts.length === 0 && (
                     <div className="text-center py-16 flex flex-col items-center">
                         <div className="bg-zinc-900/80 p-4 rounded-full mb-4 ring-1 ring-zinc-800"><Terminal size={32} className="text-zinc-500" /></div>
@@ -168,6 +165,7 @@ export default function FeedPage() {
         )}
       </div>
 
+      {/* Widgets Laterais (Mantidos) */}
       <aside className="hidden xl:block w-[320px] shrink-0 sticky top-24 h-fit space-y-6">
           <div className={widgetCardClass + " p-5"}>
             <h3 className="font-bold text-white mb-4 text-sm flex items-center gap-2 uppercase tracking-wider border-b border-zinc-800 pb-2"><Hash size={16} className="text-orange-500"/> Trending Topics</h3>

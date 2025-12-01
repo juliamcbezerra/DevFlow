@@ -77,7 +77,7 @@ export default function ProjectsPage() {
                         <div className="px-6 pb-6 flex flex-col items-center text-center -mt-12 flex-1">
                             
                             {/* 2. ÍCONE (Quadrado) */}
-                            <Link to={`/project/${project.slug || project.id}`} className="relative z-10 shrink-0">
+                            <Link to={`/projects/${project.slug || project.id}`} className="relative z-10 shrink-0">
                                 <div className="w-24 h-24 rounded-2xl mb-4 p-1 bg-zinc-950 shadow-2xl ring-1 ring-zinc-800 group-hover:ring-zinc-600 transition-all flex items-center justify-center">
                                     {project.avatarUrl ? (
                                         <img src={project.avatarUrl} className="w-full h-full object-cover rounded-xl" />
@@ -91,7 +91,7 @@ export default function ProjectsPage() {
                             
                             {/* Nome e Slug (Altura mínima para alinhar) */}
                             <div className="mb-4 w-full min-h-[50px]">
-                                <Link to={`/project/${project.slug || project.id}`} className="font-bold text-white text-xl hover:text-cyan-400 transition-colors block truncate">
+                                <Link to={`/projects/${project.slug || project.id}`} className="font-bold text-white text-xl hover:text-cyan-400 transition-colors block truncate">
                                     {project.name}
                                 </Link>
                                 <span className="text-zinc-500 text-xs font-mono bg-zinc-900/50 px-2 py-0.5 rounded border border-zinc-800/50">c/{project.slug}</span>

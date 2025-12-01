@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom"; // Import Link
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { AppShell } from "../components/layout/AppShell";
 import { Sidebar } from "../components/layout/Sidebar";
 import { useAuth } from "../context/AuthContext";
 import { projectService, ProjectDetails } from "../services/projectService";
 import { CreatePostWidget } from "../components/feed/CreatePostWidget"; 
-import { RichTextDisplay } from "../components/feed/RichTextDisplay"; // <--- 1. Importar RichTextDisplay
+import { RichTextDisplay } from "../components/feed/RichTextDisplay";
+import { PostOptions } from "../components/feed/PostOptions";
 import api from "../services/api"; 
 import { 
     Loader2, MessageCircle, ArrowBigUp, ArrowBigDown, 
-    Share2, Users, Hash, ShieldCheck, Terminal, LogOut, UserPlus
+    Share2, Users, Hash, ShieldCheck, Terminal, LogOut, UserPlus, Crown
 } from "lucide-react";
 
 const postCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden hover:border-zinc-700/80 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-violet-900/5";
@@ -48,6 +49,18 @@ export default function ProjectPage() {
 
   const handleNewPost = (newPost: any) => {
       setPosts([newPost, ...posts]);
+      setProject(prev => prev ? {
+          ...prev,
+          _count: { ...prev._count, posts: prev._count.posts + 1 }
+      } : null);
+  };
+
+  const handleDeletePost = (postId: string) => {
+      setPosts(prev => prev.filter(p => p.id !== postId));
+      setProject(prev => prev ? {
+          ...prev,
+          _count: { ...prev._count, posts: Math.max(0, prev._count.posts - 1) }
+      } : null);
   };
 
   const handleJoinLeave = async () => {
@@ -68,7 +81,6 @@ export default function ProjectPage() {
       }
   };
 
-  // Voto Inteligente (Igual ao Feed)
   const votePost = async (e: React.MouseEvent, postId: string, intent: number) => {
     e.stopPropagation();
     setPosts(prev => prev.map(p => {
@@ -104,10 +116,15 @@ export default function ProjectPage() {
   if (loadingProject) return <AppShell><Sidebar /><div className="flex-1 flex items-center justify-center h-screen"><Loader2 className="animate-spin text-violet-500"/></div></AppShell>;
   if (!project) return <AppShell><Sidebar /><div className="flex-1 p-10 text-center text-zinc-500">Projeto não encontrado.</div></AppShell>;
 
+  // Lógica da Sidebar
+  const staffList = project.staff || [];
+  const commonMembersCount = Math.max(0, project._count.members - staffList.length);
+
   return (
     <AppShell>
       <Sidebar />
 
+      {/* ÁREA CENTRAL */}
       <div className="flex-1 min-w-0 max-w-[900px] space-y-6 pb-20 px-4">
         
         {/* HEADER */}
@@ -141,12 +158,9 @@ export default function ProjectPage() {
             </div>
         </div>
 
-        {/* WIDGET CRIAR POST */}
+        {/* WIDGET */}
         {project.isMember ? (
-            <CreatePostWidget 
-                projectId={project.id} 
-                onPostCreated={handleNewPost} 
-            />
+            <CreatePostWidget projectId={project.id} onPostCreated={handleNewPost} />
         ) : (
             <div className="bg-zinc-900/20 border border-dashed border-zinc-800 rounded-2xl p-6 text-center">
                 <p className="text-zinc-400 font-medium mb-1">Você é um visitante.</p>
@@ -154,7 +168,7 @@ export default function ProjectPage() {
             </div>
         )}
 
-        {/* LISTA DE POSTS */}
+        {/* POSTS */}
         {loadingPosts ? (
              <div className="space-y-4">{[1,2,3].map(i => <div key={i} className="h-40 bg-zinc-900/40 rounded-2xl animate-pulse border border-zinc-800/50"></div>)}</div>
         ) : (
@@ -162,35 +176,30 @@ export default function ProjectPage() {
                 {posts.map((post) => (
                     <article key={post.id} className={postCardClass}>
                         <div className="flex h-full">
-                            
-                            {/* VOTOS */}
                             <div className="w-12 bg-zinc-950/30 flex flex-col items-center py-3 border-r border-zinc-800/50 gap-1 shrink-0">
                                 <button onClick={(e) => votePost(e, post.id, 1)} className={`p-1 rounded transition-all active:scale-90 ${post.userVote === 1 ? 'text-orange-500 bg-orange-500/10' : 'text-zinc-500 hover:text-orange-500 hover:bg-zinc-800/50'}`}>
                                     <ArrowBigUp size={24} strokeWidth={2} className={post.userVote === 1 ? 'fill-orange-500/20' : ''} />
                                 </button>
-                                <span className={`font-bold text-sm my-1 ${post.userVote !== 0 ? (post.userVote === 1 ? 'text-orange-500' : 'text-violet-500') : 'text-zinc-200'}`}>
-                                    {post._count?.votes || 0}
-                                </span>
+                                <span className={`font-bold text-sm my-1 ${post.userVote !== 0 ? (post.userVote === 1 ? 'text-orange-500' : 'text-violet-500') : 'text-zinc-200'}`}>{post._count?.votes || 0}</span>
                                 <button onClick={(e) => votePost(e, post.id, -1)} className={`p-1 rounded transition-all active:scale-90 ${post.userVote === -1 ? 'text-violet-500 bg-violet-500/10' : 'text-zinc-500 hover:text-violet-500 hover:bg-zinc-800/50'}`}>
                                     <ArrowBigDown size={24} strokeWidth={2} className={post.userVote === -1 ? 'fill-violet-500/20' : ''} />
                                 </button>
                             </div>
                             
-                            {/* CONTEÚDO */}
                             <div className="flex-1 p-4 cursor-pointer hover:bg-zinc-900/40 transition-colors" onClick={() => navigate(`/post/${post.id}`)}>
-                                <div className="flex items-center gap-2 mb-2 text-xs text-zinc-500">
-                                    <Link to={`/profile/${post.author.username}`} onClick={e => e.stopPropagation()} className="font-bold text-zinc-300 hover:text-white cursor-pointer">
-                                        @{post.author.username}
-                                    </Link>
-                                    <span>•</span>
-                                    <span>{formatDate(post.createdAt)}</span>
+                                <div className="flex items-start justify-between mb-2 text-xs text-zinc-500">
+                                    <div className="flex items-center gap-2">
+                                        <Link to={`/profile/${post.author.username}`} onClick={e => e.stopPropagation()} className="font-bold text-zinc-300 hover:text-white cursor-pointer">
+                                            @{post.author.username}
+                                        </Link>
+                                        <span>•</span>
+                                        <span>{formatDate(post.createdAt)}</span>
+                                    </div>
+                                    <PostOptions postId={post.id} authorId={post.author.id} onDeleteSuccess={handleDeletePost} />
                                 </div>
-                                
-                                {/* --- 2. SUBSTITUÍDO AQUI --- */}
                                 <div className="mb-3 text-sm relative max-h-[300px] overflow-hidden mask-linear-fade">
                                     <RichTextDisplay content={post.content} className="line-clamp-6" />
                                 </div>
-
                                 <div className="flex gap-4 text-zinc-500 text-xs font-bold">
                                     <button className="flex items-center gap-2 hover:bg-zinc-800/50 px-2 py-1 rounded transition-colors"><MessageCircle size={16}/> {post._count?.comments || 0} Comentários</button>
                                     <button onClick={(e) => { e.stopPropagation(); }} className="flex items-center gap-2 hover:bg-zinc-800/50 px-2 py-1 rounded transition-colors"><Share2 size={16}/> Compartilhar</button>
@@ -199,9 +208,74 @@ export default function ProjectPage() {
                         </div>
                     </article>
                 ))}
+                {posts.length === 0 && <div className="text-center py-16 text-zinc-500">Nenhum post ainda.</div>}
             </div>
         )}
       </div>
+
+      {/* --- SIDEBAR DIREITA (ESTILO DISCORD) --- */}
+      <aside className="hidden xl:flex flex-col w-72 shrink-0 border-l border-zinc-800/50 bg-zinc-900/10 sticky top-24 h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar p-4">
+          
+          {/* CATEGORIA: DESENVOLVEDORES */}
+          <div className="mb-6">
+              <h3 className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3 px-2">
+                  Desenvolvedores — {staffList.length}
+              </h3>
+              
+              {staffList.map(member => (
+                  <Link key={member.id} to={`/profile/${member.username}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-800/50 transition-colors group">
+                      <div className="relative">
+                          <img 
+                            src={member.avatarUrl || `https://ui-avatars.com/api/?name=${member.name}`} 
+                            className="w-9 h-9 rounded-full object-cover ring-2 ring-zinc-800 group-hover:ring-violet-500/50 transition-all"
+                          />
+                          <div className={`absolute -top-1 -right-1 rounded-full p-0.5 border ${
+                              member.role === 'OWNER' 
+                                ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' 
+                                : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                          }`}>
+                              {member.role === 'OWNER' ? <Crown size={8} fill="currentColor"/> : <ShieldCheck size={8} fill="currentColor"/>}
+                          </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-zinc-200 group-hover:text-white truncate">{member.name}</p>
+                          <p className={`text-[10px] font-medium ${member.role === 'OWNER' ? 'text-yellow-500' : 'text-blue-400'}`}>
+                              {member.role === 'OWNER' ? 'Owner' : 'Admin'}
+                          </p>
+                      </div>
+                  </Link>
+              ))}
+          </div>
+
+          {/* CATEGORIA: MEMBROS */}
+          <div>
+              <h3 className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3 px-2">
+                  Membros — {commonMembersCount}
+              </h3>
+              
+              {commonMembersCount > 0 ? (
+                  <div className="px-2 py-3 bg-zinc-900/30 border border-zinc-800/50 rounded-lg text-center">
+                      <div className="flex -space-x-2 justify-center mb-2 overflow-hidden py-1">
+                          {[...Array(Math.min(4, commonMembersCount))].map((_, i) => (
+                              <div key={i} className="w-6 h-6 rounded-full bg-zinc-800 border-2 border-zinc-900 ring-1 ring-zinc-800"></div>
+                          ))}
+                          {commonMembersCount > 4 && (
+                              <div className="w-6 h-6 rounded-full bg-zinc-800 border-2 border-zinc-900 flex items-center justify-center text-[8px] text-zinc-500 font-bold">
+                                  +{commonMembersCount-4}
+                              </div>
+                          )}
+                      </div>
+                      <p className="text-xs text-zinc-500 font-medium">
+                          +{commonMembersCount} participantes na comunidade
+                      </p>
+                  </div>
+              ) : (
+                  <p className="px-2 text-xs text-zinc-600 italic">Nenhum outro membro entrou ainda.</p>
+              )}
+          </div>
+
+      </aside>
+
     </AppShell>
   );
 }
