@@ -77,7 +77,7 @@ export default function FeedPage() {
       <div className="flex-1 min-w-0 max-w-[800px] space-y-6 pb-20"> 
         
         {/* Header (Mantido igual) */}
-        <div className="flex items-center gap-3 mb-2 px-2 pt-2">
+        <div className="flex items-center gap-3 mb-2 px-2">
             {activeTab === 'foryou' && <div className="p-1.5 bg-orange-500/10 rounded-lg"><Sparkles size={18} className="text-orange-500"/></div>}
             {activeTab === 'following' && <div className="p-1.5 bg-violet-500/10 rounded-lg"><UserPlus size={18} className="text-violet-500"/></div>}
             <div>

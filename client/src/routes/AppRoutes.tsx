@@ -8,6 +8,7 @@ import ProjectPage from '../pages/Project';
 import PostDetailsPage from '../pages/PostDetails';
 import CommunityPage from '../pages/Community';
 import SettingsPage from '../pages/Settings';
+import SearchPage from '../pages/SearchPage';
 import { PrivateRoute } from './PrivateRoute';
 
 export function AppRoutes() {
@@ -42,6 +43,9 @@ export function AppRoutes() {
 
         {/* Rota de Configurações */}
         <Route path="/settings" element={<SettingsPage />} />
+
+        {/* Rota de Busca */}
+        <Route path="/search" element={<SearchPage />} />
 
         {/* Adicione aqui as futuras páginas como /projects, /profile etc */}
       </Route>

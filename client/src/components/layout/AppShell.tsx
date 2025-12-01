@@ -19,7 +19,7 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* CONTAINER PRINCIPAL - SEM PADDING TOP */}
         <div className="flex justify-center w-full">
-          <main className="w-full max-w-[1440px] px-4 flex gap-6 items-start pt-8">
+          <main className="w-full max-w-[1440px] px-4 flex gap-6 items-start pt-24">
             {/* pt-[88px] = 64px (navbar) + 24px (espaço visual) */}
             {children}
           </main>

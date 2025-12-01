@@ -132,4 +132,37 @@ export class SocialController {
     try { return await this.socialService.removePost(req.user.id, postId); } 
     catch (error: any) { throw new ForbiddenException(error.message); }
   }
+
+// --- 5. BUSCA GLOBAL (USUÁRIOS E PROJETOS) ---
+  @Get('search')
+  async searchGlobal(@Query('q') query: string) {
+    if (!query) return { users: [], projects: [] };
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { username: { contains: query, mode: 'insensitive' } }
+        ]
+      },
+      take: 5,
+      select: { id: true, name: true, username: true, avatarUrl: true, bio: true }
+    });
+
+    const projects = await this.prisma.project.findMany({
+      where: {
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { slug: { contains: query, mode: 'insensitive' } },
+          // Se quiser buscar por tags também:
+          // { tags: { has: query.toLowerCase() } }
+        ]
+      },
+      take: 5,
+      select: { id: true, name: true, slug: true, avatarUrl: true, description: true }
+    });
+
+    return { users, projects };
+  }
 }
+

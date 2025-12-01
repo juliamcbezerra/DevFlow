@@ -41,7 +41,7 @@ export default function ProjectsPage() {
     <AppShell>
       <Sidebar />
 
-      <div className="flex-1 min-w-0 pb-20 pt-6 px-4 max-w-6xl mx-auto w-full">
+      <div className="flex-1 min-w-0 pb-20 px-4 max-w-6xl mx-auto w-full">
         
         {/* Header */}
         <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
