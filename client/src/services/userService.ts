@@ -57,10 +57,8 @@ export interface UserProfile {
   isMe: boolean;
 }
 
-// --- AQUI ESTAVA O ERRO ---
-// Atualizando a interface de envio de dados
 export interface UpdateProfileData {
-  name?: string; // Adicionado caso queira editar nome
+  name?: string;
   bio?: string;
   avatarUrl?: string;
   interestTags?: string[];

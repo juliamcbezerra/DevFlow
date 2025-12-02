@@ -117,7 +117,7 @@ export class UserService {
     return await this.prisma.user.findUnique({
       where: { username },
       select: {
-        id: true, name: true, username: true, avatarUrl: true, bio: true, interestTags: true, createdAt: true,
+        id: true, name: true, username: true, avatarUrl: true, bio: true, interestTags: true, createdAt: true, bannerUrl: true, location: true, socialLinks: true,
         _count: {
           select: { followedBy: true, following: true, posts: true, projectsOwned: true }
         },

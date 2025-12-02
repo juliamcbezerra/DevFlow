@@ -164,10 +164,6 @@ export function ProfileHeader({ profile, onFollowToggle }: ProfileHeaderProps) {
               <span className="font-bold text-white text-xl">{profile._count.followedBy}</span>
               <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Seguidores</span>
             </div>
-            <div className="flex flex-col items-start">
-              <span className="font-bold text-white text-xl">{profile._count.projectsOwned}</span>
-              <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Projetos</span>
-            </div>
           </div>
         </div>
       </div>
