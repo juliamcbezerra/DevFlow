@@ -26,7 +26,7 @@ export default function SignupPage() {
 
       // Login automático após cadastro
       await signIn({ login: dados.email, password: dados.password });
-      navigate('/feed');
+      navigate('/onboarding'); // Redireciona para Onboarding
 
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Erro ao criar conta.';

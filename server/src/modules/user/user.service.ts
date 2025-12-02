@@ -23,10 +23,17 @@ export class UserService {
       data: {
         bio: dto.bio,
         avatarUrl: dto.avatarUrl,
+        bannerUrl: dto.bannerUrl,     
+        location: dto.location,      
+        socialLinks: dto.socialLinks || undefined, 
         interestTags: dto.interestTags
       },
+      // Selecione os campos para retornar atualizado
       select: {
-        id: true, name: true, username: true, avatarUrl: true, bio: true, interestTags: true
+        id: true, name: true, username: true, 
+        avatarUrl: true, bannerUrl: true, 
+        bio: true, location: true, socialLinks: true, 
+        interestTags: true
       }
     });
   }

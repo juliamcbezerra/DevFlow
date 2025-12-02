@@ -9,6 +9,7 @@ import PostDetailsPage from '../pages/PostDetails';
 import CommunityPage from '../pages/Community';
 import SettingsPage from '../pages/Settings';
 import SearchPage from '../pages/SearchPage';
+import Onboarding from '../pages/Onboarding';
 import { PrivateRoute } from './PrivateRoute';
 
 export function AppRoutes() {
@@ -21,6 +22,11 @@ export function AppRoutes() {
       {/* --- ROTAS PRIVADAS (Protegidas) --- */}
       {/* Todo mundo aqui dentro precisa de login */}
       <Route element={<PrivateRoute />}>
+
+        {/* Rota de Onboarding */}
+        <Route path="/onboarding" element={<Onboarding />} />
+
+        {/* Rota do Feed */}
         <Route path="/feed" element={<FeedPage />} />
         
         {/* Rota padrão: Se acessar a raiz '/', vai pro feed (ou login se não tiver auth) */}

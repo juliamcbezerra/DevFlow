@@ -2,6 +2,15 @@ import api from "./api";
 import { Post } from "./postsService";
 import { Project } from "./projectService";
 
+// Tipos para Links Sociais
+export interface SocialLinks {
+  github?: string;
+  linkedin?: string;
+  portfolio?: string;
+  instagram?: string;
+  [key: string]: string | undefined;
+}
+
 // Tipo para a lista da Comunidade
 export interface User {
   id: string;
@@ -9,7 +18,11 @@ export interface User {
   username: string;
   avatarUrl?: string;
   interestTags: string[];
-  // Campos novos da recomendação
+  // Novos campos opcionais na listagem (se o backend mandar)
+  bannerUrl?: string; 
+  location?: string;
+  
+  // Campos da recomendação
   commonTags?: number;
   commonConnections?: number;
   score?: number;
@@ -18,6 +31,7 @@ export interface User {
   };
 }
 
+// Tipo para Perfil Completo
 export interface UserProfile {
   id: string;
   name: string;
@@ -26,6 +40,13 @@ export interface UserProfile {
   bio?: string;
   createdAt: string;
   interestTags: string[];
+  
+  // --- NOVOS CAMPOS ADICIONADOS ---
+  bannerUrl?: string;
+  location?: string;
+  socialLinks?: SocialLinks;
+  // --------------------------------
+
   _count: {
     followedBy: number;
     following: number;
@@ -36,14 +57,22 @@ export interface UserProfile {
   isMe: boolean;
 }
 
+// --- AQUI ESTAVA O ERRO ---
+// Atualizando a interface de envio de dados
 export interface UpdateProfileData {
+  name?: string; // Adicionado caso queira editar nome
   bio?: string;
   avatarUrl?: string;
   interestTags?: string[];
+  
+  // Campos novos necessários para o Onboarding
+  bannerUrl?: string;
+  location?: string;
+  socialLinks?: SocialLinks;
 }
 
 export const userService = {
-  // 1. Lista Comunidade (Aceita Filtro)
+  // 1. Lista Comunidade
   getAll: async (type: 'foryou' | 'following' = 'foryou') => {
     const { data } = await api.get<User[]>(`/users?type=${type}`);
     return data;

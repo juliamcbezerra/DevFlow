@@ -32,8 +32,11 @@ model User {
   username     String   @unique // Importante para URL de perfil
   password     String
   avatarUrl    String?
+  bannerUrl    String?
   bio          String?
+  location     String?
   interestTags String[] @default([]) // Ex: ["React", "Node"]
+  socialLinks  Json?
   createdAt    DateTime @default(now())
   birthDate    DateTime
 
@@ -90,6 +93,7 @@ model Project {
   slug        String?  @unique // Ex: rocketseat-education
   isPublic    Boolean  @default(true)
   avatarUrl   String?
+  bannerUrl   String?
   tags        String[] @default([]) // Tags da comunidade
   createdAt   DateTime @default(now())
 

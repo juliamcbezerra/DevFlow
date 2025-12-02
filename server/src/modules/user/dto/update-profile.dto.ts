@@ -1,20 +1,29 @@
-import { IsOptional, IsString, IsArray } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsOptional, IsArray, IsObject } from 'class-validator';
 
 export class UpdateProfileDto {
-  @ApiProperty({ required: false })
-  @IsString()
   @IsOptional()
+  @IsString()
   bio?: string;
 
-  @ApiProperty({ required: false })
-  @IsString()
   @IsOptional()
+  @IsString()
   avatarUrl?: string;
 
-  @ApiProperty({ required: false })
+  // --- NOVOS ---
+  @IsOptional()
+  @IsString()
+  bannerUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  location?: string;
+
+  @IsOptional()
+  @IsObject()
+  socialLinks?: Record<string, string>;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  @IsOptional()
   interestTags?: string[];
 }
