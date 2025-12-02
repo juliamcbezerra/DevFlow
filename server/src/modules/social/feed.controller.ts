@@ -17,4 +17,14 @@ export class FeedControler {
             limit: query.limit ? Number(query.limit) : 20,
         });
     }
+
+    @UseGuards(JwtGuard)
+    @Get('following')
+    async getFollowing(@Req() req, @Query('cursor') cursor?: string, @Query('limit') limit = 20) {
+        return this.feedService.getFollowingFeed({
+            userId: req.user.id,
+            limit: Number(limit),
+            cursor,
+        });
+    }
 }
