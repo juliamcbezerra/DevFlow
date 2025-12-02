@@ -1,12 +1,19 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import api from '../services/api';
 
-interface User {
+// 1. Atualizei a interface com os novos campos (Banner, Bio, etc)
+export interface User {
   id: string;
   email: string;
   name: string;
   username: string;
   avatarUrl?: string;
+  // Novos campos:
+  bannerUrl?: string;
+  bio?: string;
+  location?: string;
+  socialLinks?: any;
+  interestTags?: string[];
 }
 
 interface AuthContextData {
@@ -15,6 +22,7 @@ interface AuthContextData {
   signIn: (data: any) => Promise<void>;
   signUp: (data: any) => Promise<void>;
   signOut: () => void;
+  updateUser: (data: Partial<User>) => void;
   loading: boolean;
 }
 
@@ -26,7 +34,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const storedUser = localStorage.getItem('@DevFlow:user');
-    if (storedUser) {
+    const storedToken = localStorage.getItem('@DevFlow:token');
+
+    if (storedUser && storedToken) {
+      // Restaura o token nas requisições do Axios
+      api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
       setUser(JSON.parse(storedUser));
     }
     setLoading(false);
@@ -36,12 +48,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const response = await api.post('/auth/signin', {
       login: credentials.login,
       password: credentials.password,
-      rememberMe: credentials.rememberMe,
     });
     
-    // O backend retorna { user: { ... } }
-    const { user } = response.data;
+    // O backend retorna { access_token, user }
+    const { user, access_token } = response.data;
 
+    // Salva o Token (Importante para persistência)
+    localStorage.setItem('@DevFlow:token', access_token);
+    api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+
+    // Salva o Usuário
     setUser(user);
     localStorage.setItem('@DevFlow:user', JSON.stringify(user));
   }
@@ -53,11 +69,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function signOut() {
     setUser(null);
     localStorage.removeItem('@DevFlow:user');
+    localStorage.removeItem('@DevFlow:token'); // Remove o token
+    delete api.defaults.headers.common['Authorization']; // Limpa o header
     window.location.href = '/login';
   }
 
+  // --- NOVA FUNÇÃO: Atualiza o usuário no contexto e no localStorage ---
+  // Isso permite que a Navbar atualize o avatar instantaneamente sem F5
+  const updateUser = (data: Partial<User>) => {
+    if (user) {
+        const updatedUser = { ...user, ...data };
+        setUser(updatedUser);
+        localStorage.setItem('@DevFlow:user', JSON.stringify(updatedUser));
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, signIn, signUp, signOut, loading }}>
+    <AuthContext.Provider value={{ 
+        user, 
+        isAuthenticated: !!user, 
+        signIn, 
+        signUp, 
+        signOut, 
+        updateUser,
+        loading 
+    }}>
       {children}
     </AuthContext.Provider>
   );
