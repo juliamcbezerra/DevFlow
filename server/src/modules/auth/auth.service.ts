@@ -1,84 +1,119 @@
-import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
-import { CreateUserDto, LoginSessionDto, SessionDto } from 'src/modules/auth/dto/user.dto';
-import * as bcrypt from 'bcrypt';
-import { IAuthRepository } from './auth-interface';
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import type { Response } from 'express';
+import * as bcrypt from 'bcrypt';
+import { Response } from 'express';
+import { CreateUserDto, LoginSessionDto } from './dto/user.dto';
 
 @Injectable()
 export class AuthService {
-    constructor(
-        private auth: IAuthRepository,
-        private jwtService: JwtService,
-    ) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
-        // @param
+  // --- CADASTRO ---
+  async signUp(dto: CreateUserDto) {
+    // 1. Verificar se email já existe
+    const emailExists = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
 
-    async signUp(data: CreateUserDto) {
-        // 1. Checar se o usuário já existe
-        const userExists = await this.auth.findByEmail(data.email);
+    if (emailExists) throw new ConflictException('Email já está em uso.');
 
-        if (userExists) throw new ConflictException('Email já cadastrado');
-        
-        // 2. Hashear a senha (Implementando AUTH-03)
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(data.password, saltRounds);
+    // 2. Lógica de Username (Blindagem)
+    let finalUsername = dto.username;
 
-        // 3. Substituir senha original pela hasheada
-        const newUserData = {...data, password: hashedPassword};
-
-        // 4. Salvar o novo usuário no banco
-        const user = await this.auth.signup(newUserData);
-
-        // 5. Retornar o usuário criado (sem a senha)
-        const { password, ...result } = user;
-
-        return result;
+    if (finalUsername) {
+      // Se o usuário mandou um username, verifica se já existe
+      const usernameExists = await this.prisma.user.findUnique({
+        where: { username: finalUsername },
+      });
+      if (usernameExists) throw new ConflictException('Este nome de usuário já está em uso.');
+    } else {
+      // Se NÃO mandou, gera um automático (ex: lucas_17327328)
+      // Pega a parte antes do @ e adiciona timestamp para garantir unicidade
+      const emailPrefix = dto.email.split('@')[0];
+      finalUsername = `${emailPrefix}_${Date.now()}`;
     }
 
-    async signIn(data: LoginSessionDto, res: Response) {
-        // 1. Checa se existe o usuário
-        const user = await this.auth.findByEmail(data.email);
+    // 3. Hash da senha
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-        if(!user) throw new UnauthorizedException('Credenciais inválidas');
+    // 4. Criar usuário
+    await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        name: dto.name,
+        password: hashedPassword,
+        username: finalUsername, 
+        birthDate: new Date(dto.birthDate),
+      },
+    });
 
-        // 2. Checa se a senha está correta
-        const isPasswordValid = await bcrypt.compare(data.password, user.password);
-        if(!isPasswordValid) throw new UnauthorizedException('Credenciais inválidas');
-        
-        // 3. Cria os tokens
-        const payload = { sub: user.id, email: user.email };
+    return { message: 'Usuário criado com sucesso!' };
+  }
 
-        const accessToken = await this.jwtService.sign(payload, { expiresIn: '1h'});
-        const refreshToken = await this.jwtService.sign(payload, { expiresIn: '15d'});
-        
-        res.cookie('access_token', accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 60 * 60 * 1000, // 1 hora
-        });
+  // --- LOGIN ---
+  async signIn(dto: LoginSessionDto, res: Response) {
+    // 1. Buscar usuário
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: dto.login },
+          { username: dto.login },
+        ],
+      },
+    });
 
-        res.cookie('refresh_token', refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 15 * 24 * 60 * 60 * 1000, // 15 dias
-        });
+    if (!user) throw new UnauthorizedException('Credenciais inválidas');
 
-        // 4. Cria sessão no banco
-        const sessionData: SessionDto = {
-            userId: user.id,
-            accessToken,
-            refreshToken,
-        };
+    // 2. Validar senha
+    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+    if (!isPasswordValid) throw new UnauthorizedException('Credenciais inválidas');
 
-        const session = await this.auth.signin(sessionData);
-        
-        // 5. Retornar usuário logado 
-        return { 
-            message: 'Login bem-sucedido',
-            userId: session.userId
-        };
+    // 3. Gerar JWT
+    const payload = { sub: user.id, email: user.email };
+    const token = await this.jwtService.signAsync(payload);
+
+    // 4. SALVAR SESSÃO NO BANCO
+    // Diagrama do fluxo de autenticação:
+    // 
+    
+    const expiresAt = new Date();
+
+    if (dto.rememberMe) {
+      // 30 dias
+      expiresAt.setDate(expiresAt.getDate() + 30);
+    } else {
+      expiresAt.setDate(expiresAt.getDate() + 1);
     }
+    
+    await this.prisma.session.create({
+      data: {
+        sessionToken: token,
+        userId: user.id,
+        expires: expiresAt,
+      },
+    });
+
+    // 5. INJETAR COOKIE
+    res.cookie('access_token', token, {
+      httpOnly: true,
+      secure: false, // localhost
+      sameSite: 'lax',
+      expires: expiresAt,
+    });
+
+    // 6. Retornar usuário
+    return {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+      },
+    };
+  }
 }

@@ -37,7 +37,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // Procura uma sessão ativa no banco com este token
     const session = await this.prisma.session.findUnique({
       where: {
-        accessToken: accessToken,
+        sessionToken: accessToken,
       },
     });
 

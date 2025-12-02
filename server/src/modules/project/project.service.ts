@@ -1,51 +1,181 @@
-// server/src/modules/project/project.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 
 @Injectable()
 export class ProjectService {
-  // Injete o PrismaService para falar com o banco
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Lógica para [PROJ-01]
-   * @param dto Os dados do novo projeto (nome, descrição)
-   * @param userId O ID do utilizador logado (vem do token JWT)
-   */
-  async createProject(dto: CreateProjectDto, userId: string) {
-    // 1. Cria o projeto no banco
-    const newProject = await this.prisma.project.create({
+  // --- 1. CRIAR PROJETO ---
+  async create(userId: string, dto: CreateProjectDto) {
+    const slugExists = await this.prisma.project.findUnique({
+      where: { slug: dto.slug }
+    });
+
+    if (slugExists) {
+      throw new ConflictException('Este identificador (slug) já está em uso.');
+    }
+
+    return this.prisma.project.create({
       data: {
         name: dto.name,
+        slug: dto.slug,
         description: dto.description,
-        
-        // 2. Conecta o projeto ao seu dono (owner)
-        owner: {
-          connect: {
-            id: userId,
-          },
-        },
-      },
-    }); // <-- O 'create' do Prisma termina aqui
-
-    return newProject;
-  } // <-- A FUNÇÃO 'createProject' TERMINA AQUI
-
-  /**
-   * LÓGICA PARA [PROJ-02] (É SÓ ISTO!)
-   * @param userId O ID do utilizador logado (vem do token JWT)
-  */
-  async findMyProjects(userId: string) {
-    // Encontra todos os projetos onde o ownerId é o ID do utilizador
-    return this.prisma.project.findMany({
-      where: {
+        tags: dto.tags || [],
+        avatarUrl: dto.avatarUrl,
         ownerId: userId,
-      },
-      orderBy: {
-        createdAt: 'desc', // Opcional: mostra os mais novos primeiro
+        members: {
+          create: { userId: userId, role: 'OWNER' }
+        }
       },
     });
   }
-  
-} // <-- A CLASSE 'ProjectService' TERMINA AQUI
+
+  // --- 2. LISTAGEM (DIRECTORY) ---
+  async findAllDirectory(userId: string, type: 'foryou' | 'following') {
+    let whereClause: any = {};
+
+    if (type === 'following') {
+      const memberships = await this.prisma.member.findMany({
+        where: { userId: userId },
+        select: { projectId: true }
+      });
+      const projectIds = memberships.map(m => m.projectId);
+      whereClause.id = { in: projectIds };
+    }
+
+    const projects = await this.prisma.project.findMany({
+      where: whereClause,
+      include: {
+        owner: { select: { name: true, username: true } },
+        _count: { 
+            select: { 
+                members: true, 
+                posts: { where: { deletedAt: null } } // Ignora deletados
+            } 
+        }
+      },
+      orderBy: type === 'following' ? { createdAt: 'desc' } : undefined,
+      take: 100
+    });
+
+    if (type === 'foryou') {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { interestTags: true }
+        });
+        const userTags = user?.interestTags || [];
+
+        return projects.map(proj => {
+            let score = 0;
+            let matchingTags = 0;
+
+            if (proj.tags && userTags.length > 0) {
+                matchingTags = proj.tags.filter(tag => userTags.includes(tag)).length;
+                score += (matchingTags * 10);
+            }
+            score += (proj._count.posts * 1);
+            score += (proj._count.members * 2);
+
+            return { ...proj, matchingTags, score };
+        }).sort((a, b) => b.score - a.score);
+    }
+
+    return projects;
+  }
+
+  async findAllSmart(userId: string, type: 'foryou' | 'following') {
+      return this.findAllDirectory(userId, type);
+  }
+
+  // --- 3. DETALHES COM STAFF ---
+  async findOne(idOrSlug: string, userId: string) {
+    // 1. Busca Projeto Base
+    const project = await this.prisma.project.findFirst({
+      where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
+      include: {
+        owner: { select: { id: true, name: true, username: true, avatarUrl: true } },
+        _count: { 
+            select: { 
+                members: true, 
+                posts: { where: { deletedAt: null } } 
+            } 
+        }
+      }
+    });
+
+    if (!project) throw new NotFoundException('Projeto não encontrado');
+
+    // 2. Verifica se EU sou membro
+    const membership = await this.prisma.member.findUnique({
+        where: { userId_projectId: { userId, projectId: project.id } }
+    });
+
+    // 3. Busca a Staff (OWNER e ADMIN) para a Sidebar
+    const staffMembers = await this.prisma.member.findMany({
+        where: {
+            projectId: project.id,
+            role: { in: ['OWNER', 'ADMIN'] }
+        },
+        include: {
+            user: { select: { id: true, name: true, username: true, avatarUrl: true } }
+        },
+        // Ordena para OWNER aparecer primeiro, depois ADMINs
+        orderBy: { role: 'desc' } 
+    });
+
+    return {
+      ...project,
+      isMember: !!membership,
+      // Mapeia para o formato que o frontend espera
+      staff: staffMembers.map(m => ({
+          ...m.user,
+          role: m.role
+      }))
+    };
+  }
+
+  // --- 4. JOIN / LEAVE ---
+  async joinProject(projectIdOrSlug: string, userId: string) {
+    const project = await this.prisma.project.findFirst({
+        where: { OR: [{ id: projectIdOrSlug }, { slug: projectIdOrSlug }] },
+        select: { id: true }
+    });
+    if (!project) throw new NotFoundException('Projeto não encontrado');
+
+    const existing = await this.prisma.member.findUnique({
+       where: { userId_projectId: { userId, projectId: project.id } }
+    });
+    if (existing) return { message: 'Você já é membro.' };
+
+    await this.prisma.member.create({
+      data: { userId, projectId: project.id, role: 'MEMBER' }
+    });
+    return { message: 'Entrou com sucesso!' };
+  }
+
+  async leaveProject(projectIdOrSlug: string, userId: string) {
+    const project = await this.prisma.project.findFirst({
+        where: { OR: [{ id: projectIdOrSlug }, { slug: projectIdOrSlug }] },
+        select: { id: true, ownerId: true }
+    });
+    if (!project) throw new NotFoundException('Projeto não encontrado');
+
+    if (project.ownerId === userId) {
+        throw new ConflictException('O dono não pode sair do projeto.');
+    }
+
+    await this.prisma.member.delete({
+       where: { userId_projectId: { userId, projectId: project.id } }
+    });
+    return { message: 'Saiu com sucesso.' };
+  }
+
+  // --- 5. UTILS ---
+  async getPopularTags() {
+    try {
+        const rows: any[] = await this.prisma.$queryRaw`SELECT tag, COUNT(*)::int AS count FROM (SELECT UNNEST("tags") AS tag FROM "Project") t GROUP BY tag ORDER BY count DESC LIMIT 10`;
+        return rows.map(r => ({ tag: r.tag, count: Number(r.count) }));
+    } catch (e) { return []; }
+  }
+}

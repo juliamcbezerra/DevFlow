@@ -1,11 +1,19 @@
-﻿import React from 'react'
-import Button from './components/Button'
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { AppRoutes } from './routes/AppRoutes';
+import './index.css'; // Garanta que o CSS global está aqui
 
-export default function App() {
+function App() {
   return (
-    <div style={{ display: 'flex', gap: '12px', padding: '24px' }}>
-      <Button label="Converter em Tarefa" variant="primary" />
-      <Button label="Ver Detalhes" variant="secondary" />
-    </div>
-  )
+    // 1. O Router deve englobar tudo
+    <BrowserRouter>
+      {/* 2. O AuthProvider deve estar dentro do Router (para usar navigate se precisar) */}
+      <AuthProvider>
+        {/* 3. As Rotas da aplicação */}
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
+  );
 }
+
+export default App;

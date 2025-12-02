@@ -9,36 +9,196 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  name      String?
-  password  String    
-  createdAt DateTime  @default(now())
+// --- ENUMS ---
 
-  // Relações
-  projects Project[]
+enum PostType {
+  TEXT
+  CODE_SNIPPET
+  POLL
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// --- MODELOS DE USUÁRIO E AUTH ---
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  username     String   @unique // Importante para URL de perfil
+  password     String
+  avatarUrl    String?
+  bannerUrl    String?
+  bio          String?
+  location     String?
+  interestTags String[] @default([]) // Ex: ["React", "Node"]
+  socialLinks  Json?
+  createdAt    DateTime @default(now())
+  birthDate    DateTime
+
+  // Auth
   sessions Session[]
+
+  // Relações Sociais (Usuário x Usuário)
+  followedBy Follows[] @relation("following")
+  following  Follows[] @relation("follower")
+
+  // Comunidades (Usuário x Projeto)
+  projectsOwned Project[] // Projetos que ele criou
+  
+  // --- CORREÇÃO AQUI: Mudamos de 'memberships' para 'members' para bater com o código ---
+  members       Member[]  // Projetos que ele participa
+  
+  followedProjects FollowProject[] // Projetos que ele apenas segue (feed)
+
+  // Conteúdo
+  posts    Post[]
+  comments Comment[]
+  votes    Vote[]
 }
 
 model Session {
-  id              String    @id @default(uuid())
-  userId          String
-  accessToken     String    @unique
-  refreshToken    String
-  createdAt       DateTime  @default(now())
+  id           String   @id @default(uuid())
+  sessionToken String   @unique // O token do cookie
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
 
-  // Relações
-  user            User      @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// --- GRAFO SOCIAL (QUEM SEGUE QUEM) ---
+
+model Follows {
+  follower    User   @relation("follower", fields: [followerId], references: [id])
+  followerId  String
+  following   User   @relation("following", fields: [followingId], references: [id])
+  followingId String
+
+  createdAt DateTime @default(now())
+
+  @@id([followerId, followingId]) // Chave composta
+}
+
+// --- COMUNIDADES (PROJETOS) ---
+
 model Project {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   name        String
   description String?
-  createdAt   DateTime  @default(now())
+  slug        String?  @unique // Ex: rocketseat-education
+  isPublic    Boolean  @default(true)
+  avatarUrl   String?
+  bannerUrl   String?
+  tags        String[] @default([]) // Tags da comunidade
+  createdAt   DateTime @default(now())
 
+  // Dono (Criador)
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String
+
+  // Membros (Quem participa)
+  members Member[]
+  
+  // Seguidores (Quem acompanha o feed sem ser membro)
+  followers FollowProject[]
+
+  // Conteúdo
+  posts Post[] 
+}
+
+model Member {
+  id        String   @id @default(uuid())
+  role      Role     @default(MEMBER)
+  joinedAt  DateTime @default(now())
+
+  // Relação User
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  
+  // Relação Project
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  @@unique([userId, projectId]) // Um usuário só entra uma vez no projeto
+}
+
+model FollowProject {
+  id        String   @id @default(uuid())
+  userId    String
+  projectId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+}
+
+// --- FEED (POSTS E INTERAÇÕES) ---
+
+model Post {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // Soft delete
+
+  title   String?   // Opcional agora (estilo Twitter/Bluesky)
+  content Json      // Rich text / blocos
+  type    PostType  @default(TEXT)
+  
   // Relações
-  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  ownerId   String
+  author    User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String
+  
+  // Projeto é opcional no banco para permitir flexibilidade futura,
+  // mas na regra de negócio atual será obrigatório.
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String?
+
+  comments Comment[]
+  votes    Vote[]
+
+  @@index([authorId])
+  @@index([projectId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  parentId  String?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+
+  votes     Vote[]   
+}
+
+model Vote {
+  id        String   @id @default(uuid())
+  value     Int      // 1 ou -1
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  postId    String?  // <--- AGORA É OPCIONAL (?)
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  commentId String?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  // Garante que o usuário só vota uma vez por post OU por comentário
+  @@unique([userId, postId, commentId]) 
 }

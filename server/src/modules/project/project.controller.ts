@@ -1,53 +1,63 @@
-// server/src/modules/project/project.controller.ts
-import {
-  Controller,
-  Post,
-  Body,
-  UseGuards,
-  Req,
-  ValidationPipe,
-  Get,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Req, Query, ValidationPipe, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { JwtGuard } from '../jwt/jwt.guard';
 import { ProjectService } from './project.service';
 import { CreateProjectDto } from './dto/create-project.dto';
-import { JwtGuard } from '../jwt/jwt.guard'; 
+import { PrismaService } from '../../prisma/prisma.service';
 
-@Controller('projects') 
+@UseGuards(JwtGuard)
+@Controller('projects')
 export class ProjectController {
-  constructor(private readonly projectService: ProjectService) {}
+  constructor(
+    private readonly projectService: ProjectService,
+    private readonly prisma: PrismaService 
+  ) {}
 
-  @UseGuards(JwtGuard) 
   @Post()
-  async createProject(
-    @Body(ValidationPipe) dto: CreateProjectDto,
-    @Req() req: any, 
-  ) {
-
-    const userId = req.user.id;
-
-    if (!userId) {
-      throw new Error('ID do utilizador não encontrado no token.');
-    }
-    
-    return this.projectService.createProject(dto, userId);
+  async create(@Body(ValidationPipe) dto: CreateProjectDto, @Req() req: any) {
+    return this.projectService.create(req.user.id, dto);
   }
 
-    /**
-   * ENDPOINT PARA [PROJ-02]: Listar os meus projetos
-   * Rota: GET /projects
-   */
-  @UseGuards(JwtGuard) // 2. REUTILIZE o Guard
-  @Get() // 3. É um pedido GET
-  async findMyProjects(@Req() req: any) { // 4. REUTILIZE o @Req
-    // 5. REUTILIZE a lógica para pegar o ID do utilizador
-    const userId = req.user.id;
-
-    if (!userId) {
-      throw new Error('ID do utilizador não encontrado no token.');
+  @Get()
+  async findAll(@Req() req: any, @Query('type') type: string) {
+    try {
+        const listType = type === 'following' ? 'following' : 'foryou';
+        return await this.projectService.findAllDirectory(req.user.id, listType);
+    } catch (error) {
+        console.error("ERRO GET /projects:", error);
+        throw new InternalServerErrorException("Erro ao listar projetos.");
     }
-
-    // 6. Chame o novo serviço
-    return this.projectService.findMyProjects(userId);
   }
-  
+
+  @Get('user/:username')
+  async findByUser(@Param('username') username: string) {
+     const user = await this.prisma.user.findUnique({ where: { username } });
+     if (!user) throw new NotFoundException('Usuário não encontrado');
+
+     return this.prisma.project.findMany({
+        where: { ownerId: user.id },
+        include: {
+            _count: { 
+                select: { 
+                    members: true, 
+                    posts: { where: { deletedAt: null } } // Contagem correta
+                } 
+            }
+        }
+     });
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string, @Req() req: any) {
+    return this.projectService.findOne(id, req.user.id);
+  }
+
+  @Post(':id/join')
+  async join(@Param('id') id: string, @Req() req: any) {
+    return this.projectService.joinProject(id, req.user.id);
+  }
+
+  @Delete(':id/leave')
+  async leave(@Param('id') id: string, @Req() req: any) {
+    return this.projectService.leaveProject(id, req.user.id);
+  }
 }
