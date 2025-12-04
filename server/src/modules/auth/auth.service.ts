@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -115,5 +115,61 @@ export class AuthService {
         avatarUrl: user.avatarUrl,
       },
     };
+  }
+
+async requestPasswordChange(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    // Gera código de 6 dígitos
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date();
+    expires.setMinutes(expires.getMinutes() + 15); // Validade de 15 min
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { 
+        resetCode: code,
+        resetCodeExpires: expires
+      }
+    });
+
+    // --- MOCK DE ENVIO DE EMAIL ---
+    console.log(`\n📧 [EMAIL MOCK] Para: ${user.email}`);
+    console.log(`🔑 Seu código de verificação é: ${code}\n`);
+    // Aqui você integraria com SendGrid, AWS SES, Nodemailer, etc.
+
+    return { message: 'Código de verificação enviado para seu e-mail.' };
+  }
+
+  // 2. CONFIRMAR TROCA (Valida código e muda senha)
+  async confirmPasswordChange(userId: string, dto: any) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    
+    if (!user || !user.resetCode || !user.resetCodeExpires) {
+        throw new BadRequestException('Nenhum pedido de troca de senha ativo.');
+    }
+
+    if (new Date() > user.resetCodeExpires) {
+        throw new BadRequestException('Código expirado. Solicite novamente.');
+    }
+
+    if (user.resetCode !== dto.code) {
+        throw new BadRequestException('Código incorreto.');
+    }
+
+    // Hashear nova senha
+    const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { 
+        password: hashedPassword,
+        resetCode: null,
+        resetCodeExpires: null
+      }
+    });
+
+    return { message: 'Senha alterada com sucesso!' };
   }
 }

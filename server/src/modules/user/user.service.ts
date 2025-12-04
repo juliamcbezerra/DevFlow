@@ -21,6 +21,7 @@ export class UserService {
     return this.prisma.user.update({
       where: { id: userId },
       data: {
+        name: dto.name,
         bio: dto.bio,
         avatarUrl: dto.avatarUrl,
         bannerUrl: dto.bannerUrl,     

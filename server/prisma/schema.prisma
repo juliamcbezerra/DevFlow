@@ -43,22 +43,23 @@ model User {
   // Auth
   sessions Session[]
 
-  // Relações Sociais (Usuário x Usuário)
+  // Comunidade (Usuário x Usuário)
   followedBy Follows[] @relation("following")
   following  Follows[] @relation("follower")
 
-  // Comunidades (Usuário x Projeto)
+  // Projetos (Usuário x Projeto)
   projectsOwned Project[] // Projetos que ele criou
-  
-  // --- CORREÇÃO AQUI: Mudamos de 'memberships' para 'members' para bater com o código ---
   members       Member[]  // Projetos que ele participa
-  
   followedProjects FollowProject[] // Projetos que ele apenas segue (feed)
 
   // Conteúdo
   posts    Post[]
   comments Comment[]
   votes    Vote[]
+
+  // Redefinir senha
+  resetCode         String?
+  resetCodeExpires  DateTime?
 }
 
 model Session {
