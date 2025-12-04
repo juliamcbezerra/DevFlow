@@ -48,10 +48,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const response = await api.post('/auth/signin', {
       login: credentials.login,
       password: credentials.password,
-    });
+      rememberMe: credentials.rememberMe || false,
+    }, {
+      withCredentials: true, // ← IMPORTANTE PARA ENVIAR COOKIES
+    }
+  );
     
+    console.log('🔐 [Auth] Resposta do SignIn:', response.data);
+
     // O backend retorna { access_token, user }
     const { user, access_token } = response.data;
+    if (!access_token) {
+      console.error('❌ [Auth] Token não foi retornado pelo servidor!');
+      return;
+    }
+
+    console.log('🔑 [Auth] Token recebido:', access_token.substring(0, 20) + '...');
 
     // Salva o Token (Importante para persistência)
     localStorage.setItem('@DevFlow:token', access_token);
@@ -60,6 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Salva o Usuário
     setUser(user);
     localStorage.setItem('@DevFlow:user', JSON.stringify(user));
+
+    window.dispatchEvent(new Event('userLoggedIn'));
+
+    console.log('✅ [Auth] Login completo! Token salvo.');
   }
 
   async function signUp(credentials: any) {

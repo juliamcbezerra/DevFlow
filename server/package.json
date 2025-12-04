@@ -26,7 +26,9 @@
     "@nestjs/mapped-types": "^2.1.0",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-socket.io": "^11.1.9",
     "@nestjs/swagger": "^11.2.3",
+    "@nestjs/websockets": "^11.1.9",
     "@prisma/client": "^6.18.0",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
@@ -37,6 +39,7 @@
     "prisma": "^6.18.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "socket.io": "^4.8.1",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
@@ -69,7 +72,11 @@
     "typescript-eslint": "^8.20.0"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": "./",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
@@ -78,7 +85,9 @@
     "moduleNameMapper": {
       "^src/(.*)$": "<rootDir>/src/$1"
     },
-    "collectCoverageFrom": ["**/*.(t|j)s"],
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
     "coverageDirectory": "coverage",
     "testEnvironment": "node"
   }

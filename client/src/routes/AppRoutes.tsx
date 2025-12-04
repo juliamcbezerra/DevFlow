@@ -1,62 +1,77 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+
+// Pages - Auth
 import LoginPage from '../pages/Login';
 import SignupPage from '../pages/Signup';
-import FeedPage from '../pages/Feed';
-import ExplorePage from '../pages/Explore';
-import ProfilePage from '../pages/ProfilePage';
-import ProjectPage from '../pages/Project';
-import PostDetailsPage from '../pages/PostDetails';
-import CommunityPage from '../pages/Community';
-import SettingsPage from '../pages/Settings';
-import SearchPage from '../pages/SearchPage';
+
+// Pages - App
 import Onboarding from '../pages/Onboarding';
+import FeedPage from '../pages/Feed';
+import ProfilePage from '../pages/ProfilePage';
+import SettingsPage from '../pages/Settings';
+import PostDetailsPage from '../pages/PostDetails';
+import ChatPage from '../pages/ChatPage';
+import SearchPage from '../pages/SearchPage';
+import ProjectPage from '../pages/Project';
+import ProjectsPage from '../pages/Explore';
+import CommunityPage from '../pages/Community';
+
+// Components
+import { Navbar } from '../components/layout/Navbar';
 import { PrivateRoute } from './PrivateRoute';
+
+// Layout para páginas que têm Navbar
+const PrivateLayout = () => (
+  <>
+    <Navbar />
+    <Outlet />
+  </>
+);
 
 export function AppRoutes() {
   return (
     <Routes>
       {/* --- ROTAS PÚBLICAS --- */}
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/register" element={<SignupPage />} />
+      <Route path="/signup" element={<Navigate to="/register" replace />} />
 
-      {/* --- ROTAS PRIVADAS (Protegidas) --- */}
-      {/* Todo mundo aqui dentro precisa de login */}
+      {/* --- ROTAS PRIVADAS --- */}
       <Route element={<PrivateRoute />}>
-
-        {/* Rota de Onboarding */}
+        
+        {/* Onboarding (Sem Navbar) */}
         <Route path="/onboarding" element={<Onboarding />} />
 
-        {/* Rota do Feed */}
-        <Route path="/feed" element={<FeedPage />} />
-        
-        {/* Rota padrão: Se acessar a raiz '/', vai pro feed (ou login se não tiver auth) */}
-        <Route path="/" element={<Navigate to="/feed" replace />} />
-        
-        {/* Usando /projects para bater com a Sidebar */}
-        <Route path="/projects" element={<ExplorePage />} /> 
+        {/* Rotas com Navbar (Layout) */}
+        <Route element={<PrivateLayout />}>
+            
+            {/* Feed & Home */}
+            <Route path="/feed" element={<FeedPage />} />
+            <Route path="/" element={<Navigate to="/feed" replace />} />
 
-        {/* Rota da Comunidade */}
-        <Route path="/community" element={<CommunityPage />} />
+            {/* Perfil & Configs */}
+            <Route path="/profile/:username" element={<ProfilePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
 
-        {/* Rota de Perfil Dinâmico */}
-        <Route path="/profile/:username" element={<ProfilePage />} />
+            {/* Posts & Interação */}
+            <Route path="/post/:id" element={<PostDetailsPage />} />
+            <Route path="/search" element={<SearchPage />} />
+            
+            {/* Chat */}
+            <Route path="/chat" element={<ChatPage />} />
 
-        {/* Rota de Projeto Dinâmico */}
-        <Route path="/projects/:id" element={<ProjectPage />} />
+            {/* Projetos (Se já tiver criado, descomente) */}
+            { <Route path="/projects/:id" element={<ProjectPage />} /> }
+            { <Route path="/projects" element={<ProjectsPage />} /> }
 
-        {/* Rota de Detalhes do Post */}
-        <Route path="/post/:id" element={<PostDetailsPage />} />
+            {/* Comunidade */}
+            <Route path="/community" element={<CommunityPage />} />
 
-        {/* Rota de Configurações */}
-        <Route path="/settings" element={<SettingsPage />} />
+        </Route>
 
-        {/* Rota de Busca */}
-        <Route path="/search" element={<SearchPage />} />
-
-        {/* Adicione aqui as futuras páginas como /projects, /profile etc */}
       </Route>
 
-      {/* Rota 404 - Redireciona qualquer coisa errada para o login */}
+      {/* 404 */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

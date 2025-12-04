@@ -1,4 +1,4 @@
-import { MapPin, Calendar, Link as LinkIcon, Edit3, UserPlus, UserCheck, Github, Linkedin, Instagram, Globe } from "lucide-react";
+import { MapPin, Calendar, Link as LinkIcon, Edit3, UserPlus, UserCheck, Github, Linkedin, Instagram, Globe, MessageCircle } from "lucide-react";
 import { UserProfile } from "../services/userService";
 import { useNavigate } from "react-router-dom";
 
@@ -42,6 +42,11 @@ export function ProfileHeader({ profile, onFollowToggle }: ProfileHeaderProps) {
   
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  };
+
+  const handleMessageClick = () => {
+      // Navega para o chat passando o perfil alvo no "state"
+      navigate('/chat', { state: { targetUser: profile } });
   };
 
   return (
@@ -93,16 +98,26 @@ export function ProfileHeader({ profile, onFollowToggle }: ProfileHeaderProps) {
                   <Edit3 size={16} /> Editar Perfil
                 </button>
               ) : (
-                <button 
-                  onClick={onFollowToggle}
-                  className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold text-sm transition-all shadow-lg ${
-                    profile.isFollowing 
-                      ? 'bg-zinc-900 text-zinc-300 border border-zinc-700 hover:border-red-500/50 hover:text-red-400' 
-                      : 'bg-violet-600 hover:bg-violet-700 text-white shadow-violet-900/20'
-                  }`}
-                >
-                  {profile.isFollowing ? <><UserCheck size={18}/> Seguindo</> : <><UserPlus size={18}/> Seguir</>}
-                </button>
+                  <div className="flex gap-3">
+                    {/* BOTÃO DE MENSAGEM NOVO 👇 */}
+                    <button 
+                        onClick={handleMessageClick}
+                        className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-bold text-sm transition-all border border-zinc-700 shadow-lg"
+                    >
+                        <MessageCircle size={18} /> Mensagem
+                    </button>
+
+                    <button 
+                      onClick={onFollowToggle}
+                      className={`flex items-center gap-2 px-6 py-2 rounded-xl font-bold text-sm transition-all shadow-lg ${
+                        profile.isFollowing 
+                          ? 'bg-zinc-900 text-zinc-300 border border-zinc-700 hover:border-red-500/50 hover:text-red-400' 
+                          : 'bg-violet-600 hover:bg-violet-700 text-white shadow-violet-900/20'
+                      }`}
+                    >
+                      {profile.isFollowing ? <><UserCheck size={18}/> Seguindo</> : <><UserPlus size={18}/> Seguir</>}
+                    </button>
+                </div>
               )}
             </div>
           </div>

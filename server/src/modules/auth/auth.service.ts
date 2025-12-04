@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Response } from 'express';
 import { CreateUserDto, LoginSessionDto } from './dto/user.dto';
+import { access } from 'fs';
 
 @Injectable()
 export class AuthService {
@@ -77,11 +78,7 @@ export class AuthService {
     const token = await this.jwtService.signAsync(payload);
 
     // 4. SALVAR SESSÃO NO BANCO
-    // Diagrama do fluxo de autenticação:
-    // 
-    
     const expiresAt = new Date();
-
     if (dto.rememberMe) {
       // 30 dias
       expiresAt.setDate(expiresAt.getDate() + 30);
@@ -107,6 +104,7 @@ export class AuthService {
 
     // 6. Retornar usuário
     return {
+      access_token: token,
       user: {
         id: user.id,
         name: user.name,

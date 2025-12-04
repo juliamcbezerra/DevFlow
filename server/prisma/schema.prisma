@@ -60,6 +60,14 @@ model User {
   // Redefinir senha
   resetCode         String?
   resetCodeExpires  DateTime?
+
+  // Notificações
+  notifications   Notification[] @relation("UserNotifications")
+  triggeredNotifs Notification[] @relation("TriggerUser")
+  
+  // Mensagens
+  sentMessages     Message[]     @relation("SentMessages")
+  receivedMessages Message[]     @relation("ReceivedMessages")
 }
 
 model Session {
@@ -202,4 +210,37 @@ model Vote {
 
   // Garante que o usuário só vota uma vez por post OU por comentário
   @@unique([userId, postId, commentId]) 
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  type      String   // 'LIKE', 'COMMENT', 'FOLLOW', 'REPLY'
+  content   String   // Texto curto. Ex: "curtiu seu post"
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Quem recebe a notificação
+  userId    String
+  user      User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Quem gerou a notificação (Opcional, pois pode ser sistema)
+  triggerUserId String?
+  triggerUser   User?   @relation("TriggerUser", fields: [triggerUserId], references: [id])
+
+  // Links opcionais para onde a notificação leva
+  postId    String?
+  projectId String?
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  read      Boolean  @default(false)
+
+  senderId  String
+  sender    User     @relation("SentMessages", fields: [senderId], references: [id])
+
+  receiverId String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
 }
