@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationService } from '../notification/notification.service'; // <--- OBRIGATÓRIO
 import { CreatePostDto } from './dto/create-post.dto';
 import { VoteDto } from './dto/vote.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -7,7 +8,10 @@ import { UpdatePostDto } from './dto/update-post.dto';
 
 @Injectable()
 export class SocialService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationService: NotificationService // <--- Já injetado
+  ) {}
 
   // --- POSTS ---
   async createPost(dto: CreatePostDto, userId: string, projectId?: string) {
@@ -97,15 +101,47 @@ export class SocialService {
   // --- VOTOS (POST E COMENTÁRIO) ---
   
   async toggleVote(userId: string, postId: string, dto: VoteDto) {
-    const existingVote = await this.prisma.vote.findUnique({
-      where: { userId_postId_commentId: { userId, postId, commentId: "" } }, // Ajuste se seu unique key for diferente
-    }).catch(() => null) || await this.prisma.vote.findFirst({ where: { userId, postId } });
+    let voteAction = 'neutral'; // Para saber se devemos notificar
+
+    const existingVote = await this.prisma.vote.findFirst({ where: { userId, postId } });
 
     if (existingVote) {
-      if (existingVote.value === dto.value) return this.prisma.vote.delete({ where: { id: existingVote.id } });
-      return this.prisma.vote.update({ where: { id: existingVote.id }, data: { value: dto.value } });
+      if (existingVote.value === dto.value) {
+          // Remover voto (toggle off)
+          await this.prisma.vote.delete({ where: { id: existingVote.id } });
+      } else {
+          // Atualizar voto (ex: mudou de downvote para upvote)
+          await this.prisma.vote.update({ where: { id: existingVote.id }, data: { value: dto.value } });
+          if (dto.value === 1) voteAction = 'upvote';
+      }
+    } else {
+      // Novo Voto
+      await this.prisma.vote.create({ data: { value: dto.value, userId, postId } });
+      if (dto.value === 1) voteAction = 'upvote';
     }
-    return this.prisma.vote.create({ data: { value: dto.value, userId, postId } });
+
+    // --- NOTIFICAÇÃO DE LIKE (UPVOTE) ---
+    if (voteAction === 'upvote') {
+        const post = await this.prisma.post.findUnique({ where: { id: postId } });
+        
+        // Se o post existe E eu não estou curtindo meu próprio post
+        if (post && post.authorId !== userId) {
+            const liker = await this.prisma.user.findUnique({ where: { id: userId } });
+            
+            if (liker) {
+                console.log(`🔔 Like detectado! Enviando notificação para ${post.authorId}`);
+                await this.notificationService.createAndSend(
+                    post.authorId,
+                    `${liker.name} curtiu sua publicação.`,
+                    'LIKE',
+                    userId
+                );
+            }
+        }
+    }
+    // ------------------------------------
+
+    return { success: true };
   }
 
   async toggleCommentVote(userId: string, commentId: string, dto: VoteDto) {
@@ -121,7 +157,8 @@ export class SocialService {
   // --- COMENTÁRIOS ---
 
   async createComment(userId: string, postId: string, dto: CreateCommentDto) {
-    return this.prisma.comment.create({
+    // 1. Cria o comentário
+    const comment = await this.prisma.comment.create({
       data: {
         content: dto.content,
         postId,
@@ -130,6 +167,23 @@ export class SocialService {
       },
       include: { author: { select: { id: true, name: true, username: true, avatarUrl: true } } }
     });
+
+    // --- NOTIFICAÇÃO DE COMENTÁRIO ---
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+    
+    // Se o post existe E eu não estou comentando no meu próprio post
+    if (post && post.authorId !== userId) {
+        console.log(`🔔 Comentário detectado! Enviando notificação para ${post.authorId}`);
+        await this.notificationService.createAndSend(
+            post.authorId,
+            `${comment.author.name} comentou na sua publicação.`,
+            'COMMENT',
+            userId
+        );
+    }
+    // ---------------------------------
+
+    return comment;
   }
 
   async findCommentsByPost(postId: string) {
@@ -138,7 +192,7 @@ export class SocialService {
       orderBy: { createdAt: 'asc' },
       include: {
         author: { select: { id: true, name: true, username: true, avatarUrl: true } },
-        votes: { select: { value: true, userId: true } } // Inclui votos
+        votes: { select: { value: true, userId: true } }
       }
     });
   }
@@ -146,7 +200,6 @@ export class SocialService {
   private buildCommentTree(comments: any[]): any[] {
     const childrenMap = new Map<string | null, any[]>();
     
-    // Processa scores antes da árvore
     const processedComments = comments.map(c => {
         const score = c.votes.reduce((acc: number, curr: any) => acc + curr.value, 0);
         return { ...c, score };
@@ -162,12 +215,12 @@ export class SocialService {
       const nodes = (childrenMap.get(parentId) ?? []) as any[];
       return nodes.map((comment) => ({
         id: comment.id,
-        postId: comment.postId, // Garante que o ID do post vá para o front
+        postId: comment.postId, 
         content: comment.content,
         createdAt: comment.createdAt,
         author: comment.author,
         score: comment.score,
-        votes: comment.votes, // Envia lista de votos para front saber se user votou
+        votes: comment.votes,
         replies: buildBranch(comment.id)
       }));
     };

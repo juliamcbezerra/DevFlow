@@ -1,11 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateInterestsDto } from './dto/update-interests.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { NotificationService } from '../notification/notification.service'; 
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationService: NotificationService // <--- Injeção
+  ) {}
 
   // 1. Atualizar Tags de Interesse
   async updateInterests(userId: string, dto: UpdateInterestsDto) {
@@ -16,7 +20,7 @@ export class UserService {
     });
   }
 
-  // 2. Atualizar Perfil (Bio, Avatar, Tags)
+  // 2. Atualizar Perfil
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     return this.prisma.user.update({
       where: { id: userId },
@@ -29,7 +33,6 @@ export class UserService {
         socialLinks: dto.socialLinks || undefined, 
         interestTags: dto.interestTags
       },
-      // Selecione os campos para retornar atualizado
       select: {
         id: true, name: true, username: true, 
         avatarUrl: true, bannerUrl: true, 
@@ -39,95 +42,99 @@ export class UserService {
     });
   }
 
-  // 3. Listar Comunidade (Lógica Inteligente)
+  // 3. Listar Comunidade
   async findAllCommunity(userId: string, type: 'foryou' | 'following') {
-    
-    // ABA SEGUINDO
     if (type === 'following') {
       return this.prisma.user.findMany({
-        where: {
-          followedBy: { some: { followerId: userId } }
-        },
-        select: {
-          id: true, name: true, username: true, avatarUrl: true, interestTags: true,
-          _count: { select: { followedBy: true } }
-        }
+        where: { followedBy: { some: { followerId: userId } } },
+        select: { id: true, name: true, username: true, avatarUrl: true, interestTags: true, _count: { select: { followedBy: true } } }
       });
     }
 
-    // ABA PARA VOCÊ (Recomendação)
-    
-    // A. Meus dados
-    const me = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { following: true }
-    });
-    
+    const me = await this.prisma.user.findUnique({ where: { id: userId }, include: { following: true } });
     if (!me) throw new Error("Usuário não encontrado");
 
     const myFollowingIds = me.following.map(f => f.followingId);
     const myTags = me.interestTags || [];
 
-    // B. Buscar Candidatos (Exclui eu mesmo e quem já sigo)
     const candidates = await this.prisma.user.findMany({
-      where: {
-        id: { notIn: [userId, ...myFollowingIds] },
-      },
+      where: { id: { notIn: [userId, ...myFollowingIds] } },
       select: {
         id: true, name: true, username: true, avatarUrl: true, interestTags: true,
-        // Trazemos quem segue o candidato para achar conexões em comum
         followedBy: { select: { followerId: true } }, 
         _count: { select: { followedBy: true } }
       },
       take: 100 
     });
 
-    // C. Calcular Score
     const scoredUsers = candidates.map(user => {
       let score = 0;
-
-      // Fator 1: Tags em Comum (+10 pts)
       const commonTags = user.interestTags.filter(tag => myTags.includes(tag)).length;
       score += (commonTags * 10);
-
-      // Fator 2: Conexões em Comum (+5 pts)
-      // (Pessoas que eu sigo e que também seguem esse usuário)
       const userFollowersIds = user.followedBy.map(f => f.followerId);
       const commonConnections = userFollowersIds.filter(id => myFollowingIds.includes(id)).length;
       score += (commonConnections * 5);
-
-      // Limpeza do objeto de retorno
       const { followedBy, ...userData } = user;
-
-      return {
-        ...userData,
-        commonTags,       
-        commonConnections,
-        score
-      };
+      return { ...userData, commonTags, commonConnections, score };
     });
 
-    // D. Ordenar: Maior Score primeiro
-    return scoredUsers
-      .filter(u => u.score > 0 || scoredUsers.length < 20) // Mostra relevantes ou preenche lista se tiver poucos
-      .sort((a, b) => b.score - a.score);
+    return scoredUsers.filter(u => u.score > 0 || scoredUsers.length < 20).sort((a, b) => b.score - a.score);
   }
 
-  // 4. Buscar Perfil pelo Username
-  async findByUsername(username: string) {
-    return await this.prisma.user.findUnique({
+  // 4. Buscar Perfil
+  async findByUsername(username: string, currentUserId?: string) {
+    const user = await this.prisma.user.findUnique({
       where: { username },
       select: {
         id: true, name: true, username: true, avatarUrl: true, bio: true, interestTags: true, createdAt: true, bannerUrl: true, location: true, socialLinks: true,
-        _count: {
-          select: { followedBy: true, following: true, posts: true, projectsOwned: true }
-        },
+        _count: { select: { followedBy: true, following: true, posts: true, projectsOwned: true } },
+        followedBy: currentUserId ? { where: { followerId: currentUserId } } : false,
         posts: {
-          take: 5,
-          orderBy: { createdAt: 'desc' },
+          take: 5, orderBy: { createdAt: 'desc' },
           select: { id: true, content: true, createdAt: true, _count: { select: { votes: true, comments: true } } }
         }
       },
     });
+
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    const isFollowing = currentUserId && Array.isArray(user.followedBy) ? user.followedBy.length > 0 : false;
+    const { followedBy, ...rest } = user;
+
+    return { ...rest, isFollowing };
+  }
+
+  // 5. Seguir / Deixar de Seguir (Com Notificação)
+  async toggleFollow(followerId: string, targetUsername: string) {
+    const targetUser = await this.prisma.user.findUnique({ where: { username: targetUsername } });
+    if (!targetUser) throw new NotFoundException('Usuário não encontrado');
+    if (followerId === targetUser.id) throw new BadRequestException('Não pode seguir a si mesmo');
+
+    const existingFollow = await this.prisma.follows.findUnique({
+      where: { followerId_followingId: { followerId, followingId: targetUser.id } },
+    });
+
+    if (existingFollow) {
+      await this.prisma.follows.delete({
+        where: { followerId_followingId: { followerId, followingId: targetUser.id } },
+      });
+      return { isFollowing: false };
+    } else {
+      await this.prisma.follows.create({
+        data: { followerId, followingId: targetUser.id },
+      });
+
+      // --- Notificação ---
+      const follower = await this.prisma.user.findUnique({ where: { id: followerId } });
+      if (follower) {
+          await this.notificationService.createAndSend(
+              targetUser.id,
+              `${follower.name} começou a te seguir.`,
+              'FOLLOW',
+              followerId
+          );
+      }
+      return { isFollowing: true };
+    }
   }
 }

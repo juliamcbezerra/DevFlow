@@ -11,119 +11,92 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from '../modules/chat/chat.service';
+import { Inject, forwardRef } from '@nestjs/common';
 
 @WebSocketGateway({
-  cors: {
-    origin: '*', // Libera geral para evitar erro de CORS em desenvolvimento
-    credentials: true,
-  },
-  transports: ['websocket'], // Força WebSocket direto (evita problemas de polling no Docker)
+  cors: { origin: '*', credentials: true },
+  transports: ['websocket'],
 })
 export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
   @WebSocketServer() server: Server;
   
-  // Mapa para guardar socketId -> userId
   private activeUsers = new Map<string, string>();
 
   constructor(
     private jwtService: JwtService,
+    @Inject(forwardRef(() => ChatService))
     private chatService: ChatService
   ) {}
 
-  // --- LOG DE INICIALIZAÇÃO ---
-  afterInit(server: Server) {
-    console.log('🚀 [GATEWAY] WebSocket INICIADO! Porta pronta para conexões.');
+  afterInit() {
+    console.log('🚀 [GATEWAY] WebSocket INICIADO! Pronto para conexões.');
   }
 
-    async handleConnection(client: Socket) {
-    let rawToken; // ← Declare ANTES do try para estar acessível no catch
-    
+  async handleConnection(client: Socket) {
     try {
-        // 1. Tenta pegar o token
-        rawToken = client.handshake.auth?.token || client.handshake.headers?.authorization;
-        
-        if (!rawToken) {
-        console.log(`🔴 [Gateway] Sem token. Desconectando ${client.id}`);
+      let token = client.handshake.auth?.token || client.handshake.headers?.authorization;
+      
+      if (!token) {
         client.disconnect();
         return;
-        }
+      }
 
-        if (Array.isArray(rawToken)) rawToken = rawToken[0];
+      const cleanToken = token.toString().replace(/^Bearer\s+/i, '').replace(/['"]+/g, '').trim();
+      const payload = this.jwtService.verify(cleanToken, { secret: process.env.JWT_SECRET || 'secret' });
+      const userId = payload.sub;
 
-        // 2. Limpeza
-        const cleanToken = rawToken
-        .toString()
-        .replace(/^Bearer\s+/i, '')
-        .replace(/['"]+/g, '')
-        .trim();
-
-        // 🔍 DEBUG: Veja como está o token
-        console.log('🔍 [DEBUG] Token recebido:', cleanToken.substring(0, 20) + '...');
-        
-        // 3. Validação JWT
-        const payload = this.jwtService.verify(cleanToken);
-        
-        // 4. Sucesso
-        this.activeUsers.set(client.id, payload.sub);
-        await client.join(`user_${payload.sub}`);
-        
-        console.log(`🟢 [GATEWAY] Usuário Conectado: ${payload.sub}`);
+      this.activeUsers.set(client.id, userId);
+      await client.join(`user_${userId}`);
+      
+      console.log(`🟢 [GATEWAY] Conectado: ${userId}`);
 
     } catch (e) {
-        console.log(`🔴 [GATEWAY] Erro de Autenticação: ${e.message}`);
-        console.log('🔍 [DEBUG] Token problemático:', rawToken);
-        client.disconnect();
+      console.log(`🔴 [GATEWAY] Falha Auth: ${e.message}`);
+      client.disconnect();
     }
   }
 
   handleDisconnect(client: Socket) {
-    const userId = this.activeUsers.get(client.id);
-    if (userId) {
-        this.activeUsers.delete(client.id);
-        // console.log(`🔌 [GATEWAY] Usuário saiu: ${userId}`);
-    }
+    this.activeUsers.delete(client.id);
   }
 
-    @SubscribeMessage('sendMessage')
-    async handleSendMessage(
+  @SubscribeMessage('sendMessage')
+  async handleSendMessage(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { receiverId: string; content: string }
-    ) {
-    console.log(`📩 [GATEWAY] Recebendo mensagem para: ${payload.receiverId}`);
-
+  ) {
     let senderId = this.activeUsers.get(client.id);
 
-    // Fallback: Se não achou no mapa
+    // Fallback: Recupera sessão
     if (!senderId) {
-        try {
-        const raw = client.handshake.auth?.token || client.handshake.headers?.authorization;
-        const token = raw.toString().replace(/^Bearer\s+/i, '').replace(/['"]+/g, '').trim();
-        
-        // ⚡ CORREÇÃO: Remove o { secret: ... }
-        const decoded = this.jwtService.verify(token);
-        
-        senderId = decoded.sub;
-        this.activeUsers.set(client.id, senderId as string);
-        } catch (e) {
-        console.error("❌ [GATEWAY] Falha ao recuperar sessão para envio:", e.message);
+       try {
+         const raw = client.handshake.auth?.token || client.handshake.headers?.authorization;
+         const t = raw.toString().replace(/^Bearer\s+/i, '').replace(/['"]+/g, '').trim();
+         const p = this.jwtService.verify(t, { secret: process.env.JWT_SECRET || 'secret' });
+         senderId = p.sub;
+         this.activeUsers.set(client.id, senderId as string);
+       } catch { return; }
+    }
+
+    // Se ainda assim não tiver ID, aborta
+    if (!senderId) {
+        console.error("❌ [GATEWAY] SenderID não encontrado.");
         return;
-        }
     }
 
     try {
+        // --- CORREÇÃO AQUI: Adicionado '!' em senderId! ---
         const savedMessage = await this.chatService.saveMessage(
-        senderId!, 
-        payload.receiverId, 
-        payload.content
+            senderId!, // <--- O '!' FORÇA O TYPESCRIPT A ACEITAR
+            payload.receiverId, 
+            payload.content
         );
-
-        console.log("✅ [GATEWAY] Mensagem salva ID:", savedMessage.id);
-
+        
         this.server.to(`user_${payload.receiverId}`).emit('receiveMessage', savedMessage);
         client.emit('receiveMessage', savedMessage);
-
+        
     } catch (error) {
-        console.error("❌ [GATEWAY] Erro ao salvar mensagem:", error);
+        console.error("❌ [GATEWAY] Erro Chat:", error);
     }
   }
 }

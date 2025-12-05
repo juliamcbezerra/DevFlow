@@ -51,7 +51,7 @@ export class ProjectService {
         _count: { 
             select: { 
                 members: true, 
-                posts: { where: { deletedAt: null } } // Ignora deletados
+                posts: { where: { deletedAt: null } } 
             } 
         }
       },
@@ -88,9 +88,28 @@ export class ProjectService {
       return this.findAllDirectory(userId, type);
   }
 
+  // --- NOVO: BUSCAR PROJETOS DE UM USUÁRIO (Para o Perfil) ---
+  async findAllByUser(username: string) {
+      const user = await this.prisma.user.findUnique({ where: { username } });
+      if (!user) throw new NotFoundException("Usuário não encontrado");
+
+      // Busca projetos onde o usuário é membro (Owner ou Member)
+      const memberships = await this.prisma.member.findMany({
+          where: { userId: user.id },
+          include: {
+              project: {
+                  include: {
+                      _count: { select: { members: true, posts: true } }
+                  }
+              }
+          }
+      });
+
+      return memberships.map(m => m.project);
+  }
+
   // --- 3. DETALHES COM STAFF ---
   async findOne(idOrSlug: string, userId: string) {
-    // 1. Busca Projeto Base
     const project = await this.prisma.project.findFirst({
       where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
       include: {
@@ -106,12 +125,10 @@ export class ProjectService {
 
     if (!project) throw new NotFoundException('Projeto não encontrado');
 
-    // 2. Verifica se EU sou membro
     const membership = await this.prisma.member.findUnique({
         where: { userId_projectId: { userId, projectId: project.id } }
     });
 
-    // 3. Busca a Staff (OWNER e ADMIN) para a Sidebar
     const staffMembers = await this.prisma.member.findMany({
         where: {
             projectId: project.id,
@@ -120,14 +137,12 @@ export class ProjectService {
         include: {
             user: { select: { id: true, name: true, username: true, avatarUrl: true } }
         },
-        // Ordena para OWNER aparecer primeiro, depois ADMINs
         orderBy: { role: 'desc' } 
     });
 
     return {
       ...project,
       isMember: !!membership,
-      // Mapeia para o formato que o frontend espera
       staff: staffMembers.map(m => ({
           ...m.user,
           role: m.role
@@ -171,7 +186,6 @@ export class ProjectService {
     return { message: 'Saiu com sucesso.' };
   }
 
-  // --- 5. UTILS ---
   async getPopularTags() {
     try {
         const rows: any[] = await this.prisma.$queryRaw`SELECT tag, COUNT(*)::int AS count FROM (SELECT UNNEST("tags") AS tag FROM "Project") t GROUP BY tag ORDER BY count DESC LIMIT 10`;

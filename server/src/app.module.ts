@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { AppGateway } from './gateway/app.gateway';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
 import { ChatModule } from './modules/chat/chat.module'; 
 import { SocialModule } from './modules/social/social.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { ProjectModule } from './modules/project/project.module'; // Se tiver
+import { ProjectModule } from './modules/project/project.module';
+import { GatewayModule } from './gateway/gateway.module';
 
 @Module({
   imports: [
@@ -15,10 +15,9 @@ import { ProjectModule } from './modules/project/project.module'; // Se tiver
     UserModule,
     SocialModule,
     ProjectModule,
+    GatewayModule,
   ],
   controllers: [],
-  providers: [
-    AppGateway,
-  ],
+  providers: [],
 })
 export class AppModule {}
