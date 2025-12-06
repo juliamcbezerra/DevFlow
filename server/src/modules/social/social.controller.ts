@@ -1,113 +1,168 @@
-// server/src/modules/social/social.controller.ts
 import {
-  Controller,
-  Post,
-  Body,
-  Param,
-  UseGuards,
-  Req,
-  ValidationPipe,
-  Get,
-  NotFoundException, 
-  Patch,
-  Delete,
-  ForbiddenException,
+  Controller, Post, Body, Param, UseGuards, Req, ValidationPipe, Get,
+  NotFoundException, Patch, Delete, ForbiddenException, Query,
 } from '@nestjs/common';
 import { SocialService } from './social.service';
 import { CreatePostDto } from './dto/create-post.dto';
-import { VoteDto } from './dto/vote.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { JwtGuard } from '../jwt/jwt.guard';
+import { PrismaService } from '../../prisma/prisma.service';
 
-@Controller() // Prefixo 'projects' para seguir a hierarquia REST
+@UseGuards(JwtGuard)
+@Controller('social')
 export class SocialController {
-  constructor(private readonly socialService: SocialService) {}
+  constructor(
+    private readonly socialService: SocialService,
+    private readonly prisma: PrismaService 
+  ) {}
 
-  //Criar um novo Post
-  @UseGuards(JwtGuard)
+  // --- 1. FEED E WIDGETS ---
+
+  @Get('posts') 
+  async findAllGlobal(@Req() req: any, @Query('type') type: string) {
+    const feedType = type === 'following' ? 'following' : 'foryou';
+    return this.socialService.findAllSmart(req.user.id, feedType);
+  }
+
+  @Get('tags/trending')
+  async getTrendingTags() {
+    try {
+        const result = await this.prisma.$queryRaw`
+            SELECT tag, count(*)::int as count 
+            FROM (SELECT unnest(tags) as tag FROM "Project") t 
+            GROUP BY tag ORDER BY count DESC LIMIT 10
+        `;
+        return result; 
+    } catch { return []; }
+  }
+
+  @Get('users/suggestions')
+  async getWhoToFollow(@Req() req: any) {
+      const following = await this.prisma.follows.findMany({
+          where: { followerId: req.user.id },
+          select: { followingId: true }
+      });
+      const followingIds = following.map(f => f.followingId);
+
+      return this.prisma.user.findMany({
+          where: { id: { notIn: [req.user.id, ...followingIds] } },
+          take: 5,
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, name: true, username: true, avatarUrl: true }
+      });
+  }
+
+  // --- 2. PERFIL E POSTS ---
+
+  @Get('posts/user/:username')
+  async findByUser(@Param('username') username: string, @Req() req: any) {
+    const user = await this.prisma.user.findUnique({ where: { username } });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    const posts = await this.prisma.post.findMany({
+      where: { authorId: user.id, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: { select: { id: true, name: true, username: true, avatarUrl: true } },
+        project: { select: { id: true, name: true, slug: true } },
+        votes: { select: { value: true, userId: true } },
+        _count: { select: { comments: true } }
+      }
+    });
+
+    return posts.map(post => {
+        const score = post.votes.reduce((acc, curr) => acc + curr.value, 0);
+        const userVote = post.votes.find(v => v.userId === req.user.id)?.value || 0;
+        const { votes, ...rest } = post;
+        return { ...rest, userVote, _count: { comments: post._count.comments, votes: score } };
+    });
+  }
+
   @Post('projects/:projectId/posts')
-  async createPost(
-    @Param('projectId') projectId: string, // Pega o ID da URL
-    @Body(ValidationPipe) dto: CreatePostDto,
-    @Req() req: any,
-  ) {
-    const userId = req.user.id;
-    return this.socialService.createPost(dto, userId, projectId);
+  async createPost(@Param('projectId') projectId: string, @Body(ValidationPipe) dto: CreatePostDto, @Req() req: any) {
+    return this.socialService.createPost(dto, req.user.id, projectId);
   }
 
-  //Buscar o Feed do Projeto
-  @UseGuards(JwtGuard) // Opcional: Se quiser que o feed seja público, remova esta linha
   @Get('projects/:projectId/posts')
-  async findAll(@Param('projectId') projectId: string) {
-    return this.socialService.findAllByProject(projectId);
+  async findAllByProject(@Param('projectId') projectId: string, @Req() req: any) {
+    return this.socialService.findAllByProject(projectId, req.user.id);
   }
 
-  //Votar/Desvotar num Post
-  @UseGuards(JwtGuard)
-  @Post('posts/:postId/vote') // Note que a rota começa em 'posts', não 'projects'
-  async vote(
-    @Param('postId') postId: string,
-    @Body(ValidationPipe) dto: VoteDto,
-    @Req() req: any,
-  ) {
-    return this.socialService.toggleVote(req.user.id, postId, dto);
+  // --- 3. INTERAÇÕES (VOTOS E COMENTÁRIOS) ---
+
+  @Post('vote')
+  async vote(@Body() body: { postId: string; value: number }, @Req() req: any) {
+    const safeValue = body.value > 0 ? 1 : -1;
+    return this.socialService.toggleVote(req.user.id, body.postId, { value: safeValue });
   }
 
-  //Criar um Comentário num Post
-  @UseGuards(JwtGuard)
+  // NOVO: Votar em Comentário
+  @Post('comments/vote')
+  async voteComment(@Body() body: { commentId: string; value: number }, @Req() req: any) {
+    const safeValue = body.value > 0 ? 1 : -1;
+    return this.socialService.toggleCommentVote(req.user.id, body.commentId, { value: safeValue });
+  }
+
   @Post('posts/:postId/comments')
-  async createComment(
-    @Param('postId') postId: string,
-    @Body(ValidationPipe) dto: CreateCommentDto,
-    @Req() req: any,
-  ) {
+  async createComment(@Param('postId') postId: string, @Body(ValidationPipe) dto: CreateCommentDto, @Req() req: any) {
     return this.socialService.createComment(req.user.id, postId, dto);
   }
 
-  //Buscar Comentários de um Post
-  @UseGuards(JwtGuard)
   @Get('posts/:postId/comments')
   async getComments(@Param('postId') postId: string) {
-    return this.socialService.findCommentsByPost(postId);
+    return this.socialService.getCommentsTree(postId);
   }
 
-  //Buscar um Post pelo ID
-  @UseGuards(JwtGuard)
+  // --- 4. CRUD POST ---
+
   @Get('posts/:postId')
-  async getPost(@Param('postId') postId: string) {
-    const post = await this.socialService.findPostById(postId);
-    
-    if (!post) {
-      throw new NotFoundException('Post não encontrado.');
-    }
-
-    return post;
+  async getPost(@Param('postId') postId: string, @Req() req: any) {
+    return this.socialService.findPostById(postId, req.user.id);
   }
 
-  // Atualizar um post
-  @UseGuards(JwtGuard)
   @Patch('posts/:postId')
-  async update(
-    @Param('postId') postId: string,
-    @Body(ValidationPipe) dto: UpdatePostDto,
-    @Req() req: any,
-  ) {
-    try {
-      return await this.socialService.updatePost(req.user.id, postId, dto);
-    } catch (error) {
-      // Tratamento de erro simples
-      throw new ForbiddenException(error.message);
-    }
+  async update(@Param('postId') postId: string, @Body(ValidationPipe) dto: UpdatePostDto, @Req() req: any) {
+    try { return await this.socialService.updatePost(req.user.id, postId, dto); } 
+    catch (error: any) { throw new ForbiddenException(error.message); }
   }
-  // Deletar um post
-  @UseGuards(JwtGuard)
+
   @Delete('posts/:postId')
   async remove(@Param('postId') postId: string, @Req() req: any) {
-    try {
-      return await this.socialService.removePost(req.user.id, postId);
-    } catch (error) {
-      throw new ForbiddenException(error.message);
-    }
+    try { return await this.socialService.removePost(req.user.id, postId); } 
+    catch (error: any) { throw new ForbiddenException(error.message); }
+  }
+
+// --- 5. BUSCA GLOBAL (USUÁRIOS E PROJETOS) ---
+  @Get('search')
+  async searchGlobal(@Query('q') query: string) {
+    if (!query) return { users: [], projects: [] };
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { username: { contains: query, mode: 'insensitive' } }
+        ]
+      },
+      take: 5,
+      select: { id: true, name: true, username: true, avatarUrl: true, bio: true }
+    });
+
+    const projects = await this.prisma.project.findMany({
+      where: {
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { slug: { contains: query, mode: 'insensitive' } },
+          // Se quiser buscar por tags também:
+          // { tags: { has: query.toLowerCase() } }
+        ]
+      },
+      take: 5,
+      select: { id: true, name: true, slug: true, avatarUrl: true, description: true }
+    });
+
+    return { users, projects };
   }
 }
+

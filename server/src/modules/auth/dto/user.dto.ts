@@ -6,10 +6,11 @@ import {
   MinLength,
   IsOptional,
   IsUrl,
+  IsDateString, 
+  IsBoolean,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'; 
 
-// Interface não precisa de decorator do Swagger, pois não é usada diretamente na validação
 export interface UserDto {
   id: string;
   email: string;
@@ -37,6 +38,15 @@ export class CreateUserDto {
   name: string;
 
   @ApiProperty({
+    description: 'Nome de usuário único (slug). Se não enviado, será gerado automaticamente.',
+    example: 'millena_dev',
+    required: false, 
+  })
+  @IsOptional() 
+  @IsString()
+  username?: string;
+
+  @ApiProperty({
     description: 'Senha segura (mínimo 8 caracteres)',
     example: 'senhaSegura123!',
     minLength: 8,
@@ -54,28 +64,26 @@ export class CreateUserDto {
   @IsString()
   @IsUrl({}, { message: 'A foto de perfil deve ser uma URL válida' })
   profilePic?: string;
+  
+  @ApiProperty({ example: '2000-12-25', description: 'Data de nascimento (YYYY-MM-DD)' })
+  @IsDateString() 
+  @IsNotEmpty()
+  birthDate: string;
 }
 
-// Esta classe define o que o Backend RESPONDE. É útil documentar também!
 export class SessionDto {
   @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
   userId: string;
-
-  @ApiProperty({ description: 'Token JWT para acesso', example: 'eyJhbGciOiJIUz...' })
-  accessToken: string;
-
-  @ApiProperty({ description: 'Token para renovar a sessão', example: 'eyJhbGciOiJIUz...' })
-  refreshToken: string;
 }
 
 export class LoginSessionDto {
   @ApiProperty({
-    description: 'Email cadastrado',
-    example: 'lucas@devflow.com',
+    description: 'Email ou Nome de usuário',
+    example: 'lucas@devflow.com ou lucas_dev',
   })
-  @IsEmail()
+  @IsString()
   @IsNotEmpty()
-  email: string;
+  login: string;
 
   @ApiProperty({
     description: 'Senha do usuário',
@@ -85,4 +93,9 @@ export class LoginSessionDto {
   @IsNotEmpty()
   @MinLength(8, { message: 'A senha possui pelo menos 8 caracteres' })
   password: string;
+
+  @ApiProperty({ description: 'Manter conectado por 30 dias', required: false })
+  @IsOptional()
+  @IsBoolean()
+  rememberMe?: boolean;
 }

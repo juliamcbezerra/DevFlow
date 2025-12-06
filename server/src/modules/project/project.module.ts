@@ -2,16 +2,18 @@
 import { Module } from '@nestjs/common';
 import { ProjectService } from './project.service';
 import { ProjectController } from './project.controller';
-import { PrismaModule } from '../../prisma/prisma.module'; // Importe o Módulo Prisma
-import { AuthModule } from '../auth/auth.module'; // Importe o Módulo Auth
+import { PrismaModule } from '../../prisma/prisma.module'; 
+import { AuthModule } from '../auth/auth.module'; 
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
-    PrismaModule, // Adicione para ter acesso ao banco de dados
-    AuthModule,   // Adicione para ter acesso aos Guards (ex: JwtAuthGuard)
+    PrismaModule, 
+    AuthModule,   
+    NotificationModule,
   ],
   controllers: [ProjectController],
   providers: [ProjectService],
-  // Se vocês usarem o Padrão Repository, adicionem o ProjectRepository aqui
+
 })
 export class ProjectModule {}

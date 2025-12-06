@@ -1,11 +1,28 @@
 ﻿import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import App from './App'
-import './styles/globals.css'
+import './index.css'
+import { AuthProvider } from './context/AuthContext'
+import { SocketProvider } from './context/SocketContext'
 
-// Aqui Ã© onde o React "monta" o App dentro do HTML
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
-  </React.StrictMode>
+    {/* 1. Router envolve TUDO */}
+    <BrowserRouter>
+      
+      {/* 2. AuthProvider vem depois (pode usar useNavigate agora se quiser) */}
+      <AuthProvider>
+        
+        {/* 3. SocketProvider precisa do User do Auth */}
+        <SocketProvider>
+          
+          {/* 4. App contém apenas os <Routes> */}
+          <App />
+          
+        </SocketProvider>
+      </AuthProvider>
+
+    </BrowserRouter>
+  </React.StrictMode>,
 )

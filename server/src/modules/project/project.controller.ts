@@ -1,53 +1,63 @@
-// server/src/modules/project/project.controller.ts
-import {
-  Controller,
-  Post,
-  Body,
-  UseGuards,
-  Req,
-  ValidationPipe,
-  Get,
-} from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, UseGuards, Req, Query, Patch } from '@nestjs/common';
 import { ProjectService } from './project.service';
+import { JwtGuard } from '../jwt/jwt.guard';
 import { CreateProjectDto } from './dto/create-project.dto';
-import { JwtGuard } from '../jwt/jwt.guard'; 
+import { UpdateProjectDto } from './dto/update-project.dto';
+import { Role } from '@prisma/client';
 
-@Controller('projects') 
+@UseGuards(JwtGuard)
+@Controller('projects')
 export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}
 
-  @UseGuards(JwtGuard) 
-  @Post()
-  async createProject(
-    @Body(ValidationPipe) dto: CreateProjectDto,
-    @Req() req: any, 
-  ) {
-
-    const userId = req.user.id;
-
-    if (!userId) {
-      throw new Error('ID do utilizador não encontrado no token.');
-    }
-    
-    return this.projectService.createProject(dto, userId);
+  @Get()
+  findAll(@Req() req: any, @Query('type') type: 'foryou' | 'following') {
+    return this.projectService.findAllSmart(req.user.id, type);
   }
 
-    /**
-   * ENDPOINT PARA [PROJ-02]: Listar os meus projetos
-   * Rota: GET /projects
-   */
-  @UseGuards(JwtGuard) // 2. REUTILIZE o Guard
-  @Get() // 3. É um pedido GET
-  async findMyProjects(@Req() req: any) { // 4. REUTILIZE o @Req
-    // 5. REUTILIZE a lógica para pegar o ID do utilizador
-    const userId = req.user.id;
-
-    if (!userId) {
-      throw new Error('ID do utilizador não encontrado no token.');
-    }
-
-    // 6. Chame o novo serviço
-    return this.projectService.findMyProjects(userId);
+  @Post('/create')
+  create(@Body() dto: CreateProjectDto, @Req() req: any) {
+    return this.projectService.create(req.user.id, dto);
   }
-  
+
+  @Get('user/:username')
+  findByUser(@Param('username') username: string) {
+      return this.projectService.findAllByUser(username);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string, @Req() req: any) {
+    return this.projectService.findOne(id, req.user.id);
+  }
+
+  // Rotas de Convite
+  @Post(':id/invite')
+  invite(@Param('id') id: string, @Body() body: { username: string; role: Role }, @Req() req: any) {
+    return this.projectService.inviteUser(id, req.user.id, body.username, body.role);
+  }
+
+  @Post(':id/accept-invite')
+  acceptInvite(@Param('id') id: string, @Body() body: { role: Role }, @Req() req: any) {
+    return this.projectService.acceptInvite(req.user.id, id, body.role);
+  }
+
+  @Post(':id/join')
+  join(@Param('id') id: string, @Req() req: any) {
+    return this.projectService.joinProject(id, req.user.id);
+  }
+
+  @Delete(':id/leave')
+  leave(@Param('id') id: string, @Req() req: any) {
+    return this.projectService.leaveProject(id, req.user.id);
+  }
+
+  @Get('tags/popular')
+  getTags() {
+    return this.projectService.getPopularTags();
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateProjectDto, @Req() req: any) {
+    return this.projectService.update(id, req.user.id, dto);
+  }
 }

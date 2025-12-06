@@ -1,19 +1,28 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import api from '../services/api';
 
-// Tipagem do Utilizador (ajuste conforme o teu DTO do backend)
-interface User {
+// 1. Atualizei a interface com os novos campos (Banner, Bio, etc)
+export interface User {
   id: string;
   email: string;
   name: string;
+  username: string;
+  avatarUrl?: string;
+  // Novos campos:
+  bannerUrl?: string;
+  bio?: string;
+  location?: string;
+  socialLinks?: any;
+  interestTags?: string[];
 }
 
 interface AuthContextData {
   user: User | null;
   isAuthenticated: boolean;
-  signIn: (data: any) => Promise<void>; // O "data" virá do formulário de Login
-  signUp: (data: any) => Promise<void>; // O "data" virá do formulário de Signup
+  signIn: (data: any) => Promise<void>;
+  signUp: (data: any) => Promise<void>;
   signOut: () => void;
+  updateUser: (data: Partial<User>) => void;
   loading: boolean;
 }
 
@@ -23,42 +32,84 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Ao carregar a app, podemos tentar recuperar o user (se houver persistência)
-  // Nota: Como usamos Cookies HttpOnly, não podemos "ler" o token.
-  // Idealmente, teríamos um endpoint GET /auth/me para validar a sessão no load.
-  // Para o Sprint 1, vamos confiar no Login explícito.
   useEffect(() => {
     const storedUser = localStorage.getItem('@DevFlow:user');
-    if (storedUser) {
+    const storedToken = localStorage.getItem('@DevFlow:token');
+
+    if (storedUser && storedToken) {
+      // Restaura o token nas requisições do Axios
+      api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
       setUser(JSON.parse(storedUser));
     }
     setLoading(false);
   }, []);
 
   async function signIn(credentials: any) {
-    const response = await api.post('/auth/signin', credentials);
+    const response = await api.post('/auth/signin', {
+      login: credentials.login,
+      password: credentials.password,
+      rememberMe: credentials.rememberMe || false,
+    }, {
+      withCredentials: true, // ← IMPORTANTE PARA ENVIAR COOKIES
+    }
+  );
     
-    // O Backend define o Cookie automaticamente.
-    // Nós guardamos apenas os dados não sensíveis do user para a UI.
-    const userData = response.data; // O backend deve retornar o objeto user
+    console.log('🔐 [Auth] Resposta do SignIn:', response.data);
 
-    setUser(userData);
-    localStorage.setItem('@DevFlow:user', JSON.stringify(userData));
+    // O backend retorna { access_token, user }
+    const { user, access_token } = response.data;
+    if (!access_token) {
+      console.error('❌ [Auth] Token não foi retornado pelo servidor!');
+      return;
+    }
+
+    console.log('🔑 [Auth] Token recebido:', access_token.substring(0, 20) + '...');
+
+    // Salva o Token (Importante para persistência)
+    localStorage.setItem('@DevFlow:token', access_token);
+    api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+
+    // Salva o Usuário
+    setUser(user);
+    localStorage.setItem('@DevFlow:user', JSON.stringify(user));
+
+    window.dispatchEvent(new Event('userLoggedIn'));
+
+    console.log('✅ [Auth] Login completo! Token salvo.');
   }
 
   async function signUp(credentials: any) {
-    // Chama o endpoint de registo
     await api.post('/auth/signup', credentials);
-    // Depois do cadastro, podemos fazer login automático ou redirecionar
   }
 
   function signOut() {
     setUser(null);
     localStorage.removeItem('@DevFlow:user');
+    localStorage.removeItem('@DevFlow:token'); // Remove o token
+    delete api.defaults.headers.common['Authorization']; // Limpa o header
+    window.location.href = '/login';
   }
 
+  // --- NOVA FUNÇÃO: Atualiza o usuário no contexto e no localStorage ---
+  // Isso permite que a Navbar atualize o avatar instantaneamente sem F5
+  const updateUser = (data: Partial<User>) => {
+    if (user) {
+        const updatedUser = { ...user, ...data };
+        setUser(updatedUser);
+        localStorage.setItem('@DevFlow:user', JSON.stringify(updatedUser));
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, signIn, signUp, signOut, loading }}>
+    <AuthContext.Provider value={{ 
+        user, 
+        isAuthenticated: !!user, 
+        signIn, 
+        signUp, 
+        signOut, 
+        updateUser,
+        loading 
+    }}>
       {children}
     </AuthContext.Provider>
   );
