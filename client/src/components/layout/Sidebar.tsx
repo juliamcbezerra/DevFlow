@@ -9,19 +9,20 @@ export function Sidebar() {
   const { signOut } = useAuth();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Estado local para abrir/fechar modal
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [myProjects, setMyProjects] = useState<any[]>([]); // Estado para os projetos
+  
+  const [myProjects, setMyProjects] = useState<any[]>([]);
 
   const isActive = (path: string) => location.pathname === path;
   const currentType = searchParams.get('type') || 'foryou';
 
-  // Carrega projetos que o usuário segue/participa
   useEffect(() => {
       async function loadShortcuts() {
           try {
-              // 'following' traz projetos que sou membro
               const data = await projectService.getAll('following'); 
-              setMyProjects(data.slice(0, 5)); // Limita a 5 para não quebrar o layout
+              setMyProjects(data.slice(0, 5)); 
           } catch (error) {
               console.error("Erro ao carregar atalhos", error);
           }
@@ -48,7 +49,7 @@ export function Sidebar() {
     <>
       <aside className="hidden lg:flex flex-col w-64 sticky top-24 max-h-[calc(100vh-7rem)] shrink-0">
         
-        <div className="flex flex-col h-full border border-zinc-800/50 bg-zinc-900/40 backdrop-blur-xl p-4 rounded-2xl shadow-xl shadow-black/20 overflow-y-auto no-scrollbar">
+        <div className="flex flex-col h-full border border-zinc-800/50 bg-zinc-900/40 backdrop-blur-xl p-4 rounded-2xl shadow-xl shadow-black/20 overflow-y-auto custom-scrollbar">
           
           {/* SELETOR DE FEED */}
           <div className="mb-6 bg-zinc-950/50 p-1 rounded-xl border border-zinc-800/80 flex shadow-inner shrink-0">
@@ -71,10 +72,13 @@ export function Sidebar() {
                <Home size={20} />
                <span>Feed Principal</span>
             </Link>
+            
+            {/* Este é o Link de Projetos. Não tem onClick, apenas 'to'. */}
             <Link to="/projects" className={linkClasses("/projects")}>
                <Hash size={20} />
                <span>Projetos</span>
             </Link>
+            
             <Link to="/community" className={linkClasses("/community")}>
                <Users size={20} />
                <span>Comunidade</span>
@@ -91,7 +95,6 @@ export function Sidebar() {
                             to={`/projects/${proj.slug || proj.id}`}
                             className="flex items-center gap-3 px-4 py-2 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-lg transition-colors cursor-pointer group"
                         >
-                            {/* Avatarzinho ou Dot */}
                             {proj.avatarUrl ? (
                                 <img src={proj.avatarUrl} className="w-5 h-5 rounded-md object-cover" />
                             ) : (
@@ -108,7 +111,7 @@ export function Sidebar() {
               </nav>
             </div>
 
-            {/* BOTÃO CRIAR */}
+            {/* BOTÃO CRIAR - Este deve abrir o modal */}
             <div className="mt-6">
                 <button 
                     onClick={() => setIsModalOpen(true)}
@@ -132,7 +135,10 @@ export function Sidebar() {
         </div>
       </aside>
 
-      <CreateProjectModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      {/* CORREÇÃO DO ERRO TS2322: Renderização Condicional */}
+      {isModalOpen && (
+        <CreateProjectModal onClose={() => setIsModalOpen(false)} />
+      )}
     </>
   );
 }

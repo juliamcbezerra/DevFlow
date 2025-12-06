@@ -11,11 +11,11 @@ import {
 
 export default function ProjectsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('type') || 'foryou'; // Padrão 'foryou'
+  const activeTab = searchParams.get('type') || 'foryou';
   
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false); // Começa fechado
 
   useEffect(() => {
     async function loadData() {
@@ -69,14 +69,14 @@ export default function ProjectsPage() {
                 {projects.map(project => (
                     <div key={project.id} className="relative bg-zinc-950/30 border border-zinc-800/60 rounded-3xl flex flex-col hover:border-zinc-700 transition-all duration-300 group overflow-hidden shadow-lg hover:shadow-xl hover:shadow-black/40 h-full">
                         
-                        {/* 1. BANNER (Gradiente Ciano/Azul) */}
+                        {/* 1. BANNER */}
                         <div className="h-24 w-full bg-linear-to-b from-cyan-900/20 to-transparent relative shrink-0">
                         </div>
 
                         {/* Conteúdo */}
                         <div className="px-6 pb-6 flex flex-col items-center text-center -mt-12 flex-1">
                             
-                            {/* 2. ÍCONE (Quadrado) */}
+                            {/* 2. ÍCONE */}
                             <Link to={`/projects/${project.slug || project.id}`} className="relative z-10 shrink-0">
                                 <div className="w-24 h-24 rounded-2xl mb-4 p-1 bg-zinc-950 shadow-2xl ring-1 ring-zinc-800 group-hover:ring-zinc-600 transition-all flex items-center justify-center">
                                     {project.avatarUrl ? (
@@ -89,7 +89,7 @@ export default function ProjectsPage() {
                                 </div>
                             </Link>
                             
-                            {/* Nome e Slug (Altura mínima para alinhar) */}
+                            {/* Nome e Slug */}
                             <div className="mb-4 w-full min-h-[50px]">
                                 <Link to={`/projects/${project.slug || project.id}`} className="font-bold text-white text-xl hover:text-cyan-400 transition-colors block truncate">
                                     {project.name}
@@ -97,7 +97,7 @@ export default function ProjectsPage() {
                                 <span className="text-zinc-500 text-xs font-mono bg-zinc-900/50 px-2 py-0.5 rounded border border-zinc-800/50">c/{project.slug}</span>
                             </div>
 
-                            {/* Descrição (Fixo) */}
+                            {/* Descrição */}
                             <p className="text-zinc-400 text-sm mb-6 line-clamp-2 min-h-10 px-2 leading-relaxed">
                                 {project.description || "Sem descrição definida para este projeto."}
                             </p>
@@ -114,7 +114,7 @@ export default function ProjectsPage() {
                                 </div>
                             </div>
 
-                            {/* 4. TAGS (Espaço Reservado Fixo) */}
+                            {/* 4. TAGS */}
                             <div className="w-full min-h-[30px] flex items-start justify-center mb-6">
                                 {activeTab === 'foryou' && project.matchingTags && project.matchingTags > 0 ? (
                                     <span className="flex items-center gap-1 text-[10px] font-bold text-cyan-300 bg-cyan-500/10 py-1 px-3 rounded-md border border-cyan-500/20">
@@ -131,7 +131,7 @@ export default function ProjectsPage() {
                                 )}
                             </div>
 
-                            {/* Botão de Ação (No fundo) */}
+                            {/* Botão de Ação */}
                             <Link 
                                 to={`/projects/${project.slug || project.id}`}
                                 className={`mt-auto w-full py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
@@ -164,7 +164,10 @@ export default function ProjectsPage() {
 
       </div>
 
-      <CreateProjectModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      {/* ✅ CORREÇÃO: Renderização Condicional e remoção de isOpen */}
+      {isModalOpen && (
+          <CreateProjectModal onClose={() => setIsModalOpen(false)} />
+      )}
     </AppShell>
   );
 }

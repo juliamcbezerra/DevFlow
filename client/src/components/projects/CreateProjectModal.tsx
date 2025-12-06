@@ -1,223 +1,266 @@
-import { useState } from 'react';
-import { X, Loader2, Hash, Type, FileText, Image as ImageIcon, Plus } from 'lucide-react';
-import { projectService } from '../../services/projectService';
+import { useState } from "react";
+import { X, ChevronRight, ChevronLeft, Rocket, Hash, Image as ImageIcon, Link as LinkIcon, CheckCircle2, Layout, Github, Globe, MessageSquare } from "lucide-react";
+import api from "../../services/api";
+import { useNavigate } from "react-router-dom";
 
 interface CreateProjectModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess?: () => void;
+    onClose: () => void;
 }
 
-export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProjectModalProps) {
-  // Estados do Formulário
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [description, setDescription] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
-  
-  // Estados das Tags
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
+export function CreateProjectModal({ onClose }: CreateProjectModalProps) {
+    const navigate = useNavigate();
+    const [step, setStep] = useState(1);
+    const [loading, setLoading] = useState(false);
 
-  const [loading, setLoading] = useState(false);
+    // Estado do Formulário
+    const [formData, setFormData] = useState({
+        name: "",
+        slug: "",
+        description: "",
+        tags: "", // String temporária para separar por vírgula
+        avatarUrl: "",
+        bannerUrl: "",
+        github: "",
+        discord: "",
+        website: ""
+    });
 
-  if (!isOpen) return null;
+    // Gera slug automaticamente a partir do nome
+    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const name = e.target.value;
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        setFormData(prev => ({ ...prev, name, slug }));
+    };
 
-  // Gera slug automático enquanto digita o nome
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newName = e.target.value;
-    setName(newName);
-    
-    // Sugere slug apenas removendo caracteres especiais e espaços
-    const suggestedSlug = newName
-      .toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") 
-      .replace(/[^a-z0-9\s-]/g, "") 
-      .replace(/\s+/g, "-");
-      
-    setSlug(suggestedSlug);
-  };
+    const handleSubmit = async () => {
+        setLoading(true);
+        try {
+            // Processa as tags
+            const tagsArray = formData.tags.split(',').map(t => t.trim()).filter(t => t !== "");
+            
+            // Monta o payload
+            const payload = {
+                name: formData.name,
+                slug: formData.slug,
+                description: formData.description,
+                tags: tagsArray,
+                avatarUrl: formData.avatarUrl,
+                bannerUrl: formData.bannerUrl,
+                socialLinks: {
+                    github: formData.github,
+                    discord: formData.discord,
+                    website: formData.website
+                }
+            };
 
-  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
-    setSlug(val);
-  };
+            const { data } = await api.post('/projects/create', payload);
+            onClose();
+            navigate(`/projects/${data.slug}`); // Redireciona para o projeto criado
+        } catch (error: any) {
+            alert(error.response?.data?.message || "Erro ao criar projeto.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  // Adicionar Tag
-  const handleAddTag = (e?: React.MouseEvent) => {
-    e?.preventDefault();
-    const cleanTag = tagInput.trim().toLowerCase();
-    
-    if (cleanTag && !tags.includes(cleanTag) && tags.length < 5) {
-      setTags([...tags, cleanTag]);
-      setTagInput('');
-    }
-  };
+    // --- RENDERIZAÇÃO DAS ETAPAS ---
 
-  // Remover Tag
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
-  };
-
-  // Enviar Formulário usando o Service
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await projectService.create({
-        name,
-        slug,
-        description,
-        tags,
-        avatarUrl: avatarUrl || undefined
-      });
-      
-      // Limpar campos
-      setName('');
-      setSlug('');
-      setDescription('');
-      setTags([]);
-      setAvatarUrl('');
-      
-      onClose();
-      if (onSuccess) onSuccess();
-      window.location.reload(); 
-    } catch (err: any) {
-      console.error(err);
-      const msg = err.response?.data?.message || 'Erro ao criar comunidade.';
-      alert(Array.isArray(msg) ? msg[0] : msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
-
-      {/* Card */}
-      <div className="relative w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in duration-200">
-        <button onClick={onClose} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors">
-          <X size={20} />
-        </button>
-
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-white">Criar Comunidade</h2>
-          <p className="text-sm text-zinc-400">Crie um espaço para compartilhar conhecimento.</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          
-          {/* Avatar Input */}
-          <div className="flex items-center gap-4">
-            <div className="relative group w-16 h-16 rounded-2xl bg-zinc-800 border-2 border-dashed border-zinc-700 flex items-center justify-center overflow-hidden shrink-0">
-                {avatarUrl ? (
-                    <img src={avatarUrl} alt="Preview" className="w-full h-full object-cover" />
-                ) : (
-                    <ImageIcon className="text-zinc-500 group-hover:text-violet-400 transition-colors" size={24} />
-                )}
+    const renderStep1_Identity = () => (
+        <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-violet-500/10 rounded-full flex items-center justify-center mx-auto mb-3 text-violet-400">
+                    <Rocket size={32} />
+                </div>
+                <h3 className="text-xl font-bold text-white">Vamos começar!</h3>
+                <p className="text-zinc-400 text-sm">Dê um nome e uma identidade única para sua comunidade.</p>
             </div>
-            <div className="flex-1">
-                <label className="text-xs font-medium text-zinc-400 mb-1 block">URL do Avatar / Logo (Opcional)</label>
+
+            <div>
+                <label className="block text-xs font-bold text-zinc-400 uppercase mb-1">Nome do Projeto</label>
                 <input 
-                  value={avatarUrl}
-                  onChange={e => setAvatarUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20"
+                    value={formData.name} onChange={handleNameChange}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:border-violet-500 transition-colors"
+                    placeholder="Ex: Rocketseat Education" autoFocus
                 />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Nome */}
-            <div className="space-y-1">
-                <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
-                    <Type size={16} className="text-violet-500"/> Nome
-                </label>
-                <input 
-                    required 
-                    value={name} 
-                    onChange={handleNameChange} 
-                    placeholder="React Brasil" 
-                    className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-200 focus:outline-none focus:border-violet-500/50 transition-all placeholder-zinc-600" 
-                />
-            </div>
-
-            {/* Slug */}
-            <div className="space-y-1">
-                <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">URL</label>
-                <div className="relative">
-                    <span className="absolute left-3 top-3 text-zinc-500 text-sm font-mono">/</span>
+            <div>
+                <label className="block text-xs font-bold text-zinc-400 uppercase mb-1">Identificador (Slug)</label>
+                <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded-xl px-3 text-zinc-500">
+                    <span className="text-sm">devflow.com/projects/</span>
                     <input 
-                        required 
-                        value={slug} 
-                        onChange={handleSlugChange} 
-                        placeholder="react-brasil" 
-                        className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl pl-6 pr-4 py-3 text-zinc-200 focus:outline-none focus:border-violet-500/50 transition-all placeholder-zinc-600 font-mono text-sm" 
+                        value={formData.slug} onChange={e => setFormData({...formData, slug: e.target.value})}
+                        className="flex-1 bg-transparent border-none text-white p-3 focus:ring-0"
+                        placeholder="rocketseat-education"
                     />
                 </div>
             </div>
-          </div>
+        </div>
+    );
 
-          {/* Tags */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
-                <Hash size={16} className="text-violet-500"/> Tags <span className="text-zinc-500 text-xs">(Máx 5)</span>
-            </label>
-            
-            <div className="flex gap-2">
-                <input 
-                  value={tagInput}
-                  onChange={e => setTagInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                  placeholder={tags.length >= 5 ? "Limite atingido" : "Digite e Enter..."}
-                  disabled={tags.length >= 5}
-                  className="flex-1 bg-zinc-950/50 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-200 focus:outline-none focus:border-violet-500/50 transition-all placeholder-zinc-600 disabled:opacity-50"
+    const renderStep2_Details = () => (
+        <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-3 text-blue-400">
+                    <Layout size={32} />
+                </div>
+                <h3 className="text-xl font-bold text-white">Sobre o que é?</h3>
+                <p className="text-zinc-400 text-sm">Descreva o propósito e adicione tags para ser encontrado.</p>
+            </div>
+
+            <div>
+                <label className="block text-xs font-bold text-zinc-400 uppercase mb-1">Descrição Curta</label>
+                <textarea 
+                    value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white focus:border-violet-500 transition-colors h-24 resize-none"
+                    placeholder="Ex: Comunidade focada em React Native e desenvolvimento mobile..."
                 />
-                <button 
-                    type="button"
-                    onClick={handleAddTag}
-                    disabled={!tagInput.trim() || tags.length >= 5}
-                    className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 rounded-xl transition-colors disabled:opacity-50"
-                >
-                    <Plus size={20} />
-                </button>
+            </div>
+            <div>
+                <label className="block text-xs font-bold text-zinc-400 uppercase mb-1">Tags (Separadas por vírgula)</label>
+                <div className="flex items-center gap-2 bg-zinc-950 border border-zinc-800 rounded-xl px-3">
+                    <Hash size={16} className="text-zinc-500"/>
+                    <input 
+                        value={formData.tags} onChange={e => setFormData({...formData, tags: e.target.value})}
+                        className="flex-1 bg-transparent border-none text-white p-3 focus:ring-0"
+                        placeholder="react, javascript, open-source"
+                    />
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderStep3_Visuals = () => (
+        <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-pink-500/10 rounded-full flex items-center justify-center mx-auto mb-3 text-pink-400">
+                    <ImageIcon size={32} />
+                </div>
+                <h3 className="text-xl font-bold text-white">Identidade Visual</h3>
+                <p className="text-zinc-400 text-sm">Cole a URL das imagens para personalizar seu projeto.</p>
             </div>
 
-            <div className="flex flex-wrap gap-2 mt-2 min-h-6">
-                {tags.map(tag => (
-                    <span key={tag} className="flex items-center gap-1 px-3 py-1 bg-violet-500/10 border border-violet-500/20 text-violet-300 text-sm rounded-full">
-                        #{tag} 
-                        <button type="button" onClick={() => handleRemoveTag(tag)} className="hover:text-white ml-1"><X size={14} /></button>
-                    </span>
-                ))}
+            <div className="flex gap-4 items-start">
+                <div className="w-20 h-20 rounded-xl bg-zinc-800 shrink-0 overflow-hidden border border-zinc-700">
+                    {formData.avatarUrl ? <img src={formData.avatarUrl} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">Logo</div>}
+                </div>
+                <div className="flex-1">
+                    <label className="block text-xs font-bold text-zinc-400 uppercase mb-1">URL do Logo (Avatar)</label>
+                    <input 
+                        value={formData.avatarUrl} onChange={e => setFormData({...formData, avatarUrl: e.target.value})}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white text-sm focus:border-violet-500"
+                        placeholder="https://..."
+                    />
+                </div>
             </div>
-          </div>
 
-          {/* Descrição */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
-                <FileText size={16} className="text-violet-500"/> Descrição
-            </label>
-            <textarea 
-                rows={3} 
-                value={description} 
-                onChange={e => setDescription(e.target.value)} 
-                placeholder="Sobre o que é essa comunidade?" 
-                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-200 focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all placeholder-zinc-600 resize-none" 
-            />
-          </div>
+            <div className="space-y-2">
+                <div className="h-24 w-full rounded-xl bg-zinc-800 overflow-hidden border border-zinc-700 relative">
+                     {formData.bannerUrl ? <img src={formData.bannerUrl} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">Banner Preview</div>}
+                </div>
+                <div>
+                    <label className="block text-xs font-bold text-zinc-400 uppercase mb-1">URL do Banner</label>
+                    <input 
+                        value={formData.bannerUrl} onChange={e => setFormData({...formData, bannerUrl: e.target.value})}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white text-sm focus:border-violet-500"
+                        placeholder="https://..."
+                    />
+                </div>
+            </div>
+        </div>
+    );
 
-          <button 
-            type="submit" 
-            disabled={loading} 
-            className="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-violet-600/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 mt-4"
-          >
-            {loading ? <Loader2 className="animate-spin w-5 h-5"/> : 'Criar Comunidade'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+    const renderStep4_Links = () => (
+        <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-3 text-green-400">
+                    <LinkIcon size={32} />
+                </div>
+                <h3 className="text-xl font-bold text-white">Conexões</h3>
+                <p className="text-zinc-400 text-sm">Onde os membros podem encontrar mais informações?</p>
+            </div>
+
+            <div className="space-y-3">
+                <div className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 rounded-xl px-3">
+                    <Github size={18} className="text-zinc-400"/>
+                    <input 
+                        value={formData.github} onChange={e => setFormData({...formData, github: e.target.value})}
+                        className="flex-1 bg-transparent border-none text-white p-3 focus:ring-0 text-sm"
+                        placeholder="GitHub Repository URL"
+                    />
+                </div>
+                <div className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 rounded-xl px-3">
+                    <MessageSquare size={18} className="text-zinc-400"/>
+                    <input 
+                        value={formData.discord} onChange={e => setFormData({...formData, discord: e.target.value})}
+                        className="flex-1 bg-transparent border-none text-white p-3 focus:ring-0 text-sm"
+                        placeholder="Discord Invite Link"
+                    />
+                </div>
+                <div className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 rounded-xl px-3">
+                    <Globe size={18} className="text-zinc-400"/>
+                    <input 
+                        value={formData.website} onChange={e => setFormData({...formData, website: e.target.value})}
+                        className="flex-1 bg-transparent border-none text-white p-3 focus:ring-0 text-sm"
+                        placeholder="Website Oficial"
+                    />
+                </div>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
+            <div className="bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
+                
+                {/* Header Modal */}
+                <div className="p-4 border-b border-zinc-800 flex justify-between items-center">
+                    <div className="flex gap-2">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className={`h-2 w-8 rounded-full transition-colors ${step >= i ? 'bg-violet-500' : 'bg-zinc-800'}`}></div>
+                        ))}
+                    </div>
+                    <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                {/* Conteúdo Dinâmico */}
+                <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
+                    {step === 1 && renderStep1_Identity()}
+                    {step === 2 && renderStep2_Details()}
+                    {step === 3 && renderStep3_Visuals()}
+                    {step === 4 && renderStep4_Links()}
+                </div>
+
+                {/* Footer Actions */}
+                <div className="p-6 border-t border-zinc-800 bg-zinc-900/50 flex justify-between">
+                    {step > 1 ? (
+                        <button onClick={() => setStep(step - 1)} className="px-6 py-3 rounded-xl font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center gap-2 transition-colors">
+                            <ChevronLeft size={20}/> Voltar
+                        </button>
+                    ) : (
+                        <div></div> // Spacer
+                    )}
+
+                    {step < 4 ? (
+                        <button 
+                            onClick={() => setStep(step + 1)} 
+                            disabled={step === 1 && !formData.name} // Impede avançar sem nome
+                            className="bg-zinc-100 hover:bg-white text-zinc-900 px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-colors disabled:opacity-50"
+                        >
+                            Próximo <ChevronRight size={20}/>
+                        </button>
+                    ) : (
+                        <button 
+                            onClick={handleSubmit} 
+                            disabled={loading}
+                            className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-violet-900/20 transition-colors disabled:opacity-50"
+                        >
+                            {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><CheckCircle2 size={20}/> Criar Projeto</>}
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 }

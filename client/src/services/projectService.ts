@@ -7,6 +7,8 @@ export interface Project {
   slug: string;
   description?: string;
   avatarUrl?: string;
+  bannerUrl?: string;
+  socialLinks?: { github?: string; discord?: string; website?: string };
   tags: string[];
   owner: { name: string; username: string };
   _count: { members: number; posts: number };
@@ -53,7 +55,7 @@ export const projectService = {
   },
 
   create: async (projectData: CreateProjectData) => {
-    const { data } = await api.post<Project>('/projects', projectData);
+    const { data } = await api.post<Project>('/projects/create', projectData);
     return data;
   },
 

@@ -1,27 +1,41 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AppGateway } from '../../gateway/app.gateway'; // Importe a classe
+import { AppGateway } from '../../gateway/app.gateway';
+import { NotificationType } from '@prisma/client';
 
 @Injectable()
 export class NotificationService {
   constructor(
     private prisma: PrismaService,
-    private appGateway: AppGateway // Injeção direta do Singleton
+    private appGateway: AppGateway
   ) {}
 
   async createAndSend(
     userId: string, 
     content: string, 
-    type: 'LIKE' | 'COMMENT' | 'FOLLOW', 
-    triggerUserId?: string
+    type: NotificationType,
+    triggerUserId?: string,
+    projectId?: string,    
+    inviteRole?: 'ADMIN' | 'MEMBER' | 'OWNER' 
   ) {
+
     // 1. Salva no Banco
     const notification = await this.prisma.notification.create({
-      data: { userId, content, type, triggerUserId },
-      include: { triggerUser: { select: { name: true, avatarUrl: true } } }
+      data: { 
+        userId, 
+        content, 
+        type, 
+        triggerUserId,
+        projectId,
+        inviteRole: inviteRole as any 
+      },
+      include: { 
+          triggerUser: { select: { name: true, avatarUrl: true } },
+          project: { select: { name: true } } 
+      }
     });
 
-    // 2. Dispara o Socket
+    // 2. Envia via Socket
     console.log(`🔔 [Notification] Enviando para user_${userId}`);
     this.appGateway.server.to(`user_${userId}`).emit('notification', notification);
 
@@ -32,7 +46,10 @@ export class NotificationService {
     return this.prisma.notification.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      take: 20
+      take: 20,
+      include: {
+        triggerUser: { select: { name: true, avatarUrl: true, username: true } }
+      }
     });
   }
 
@@ -43,18 +60,17 @@ export class NotificationService {
     });
     return { success: true };
   }
-  
+
   async markOneAsRead(userId: string, notificationId: string) {
     return this.prisma.notification.update({
-      where: { id: notificationId, userId }, // Garante que só o dono pode marcar
+      where: { id: notificationId, userId },
       data: { read: true }
     });
   }
 
-  // Excluir notificação
   async remove(userId: string, notificationId: string) {
     return this.prisma.notification.delete({
-      where: { id: notificationId, userId } // Garante que só o dono pode deletar
+      where: { id: notificationId, userId }
     });
   }
 }

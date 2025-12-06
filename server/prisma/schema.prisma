@@ -19,8 +19,17 @@ enum PostType {
 
 enum Role {
   OWNER
-  ADMIN
-  MEMBER
+  ADMIN  // "Desenvolvedor"
+  MEMBER // "Membro"
+}
+
+// Novo Enum para tipar as notificações
+enum NotificationType {
+  LIKE
+  COMMENT
+  FOLLOW
+  REPLY
+  INVITE // Novo tipo para convites de projeto
 }
 
 // --- MODELOS DE USUÁRIO E AUTH ---
@@ -29,13 +38,13 @@ model User {
   id           String   @id @default(uuid())
   email        String   @unique
   name         String
-  username     String   @unique // Importante para URL de perfil
+  username     String   @unique 
   password     String
   avatarUrl    String?
   bannerUrl    String?
   bio          String?
   location     String?
-  interestTags String[] @default([]) // Ex: ["React", "Node"]
+  interestTags String[] @default([]) 
   socialLinks  Json?
   createdAt    DateTime @default(now())
   birthDate    DateTime
@@ -43,21 +52,21 @@ model User {
   // Auth
   sessions Session[]
 
-  // Comunidade (Usuário x Usuário)
+  // Comunidade
   followedBy Follows[] @relation("following")
   following  Follows[] @relation("follower")
 
-  // Projetos (Usuário x Projeto)
-  projectsOwned Project[] // Projetos que ele criou
-  members       Member[]  // Projetos que ele participa
-  followedProjects FollowProject[] // Projetos que ele apenas segue (feed)
+  // Projetos
+  projectsOwned Project[] 
+  members       Member[]  
+  followedProjects FollowProject[] 
 
   // Conteúdo
   posts    Post[]
   comments Comment[]
   votes    Vote[]
 
-  // Redefinir senha
+  // Senha
   resetCode         String?
   resetCodeExpires  DateTime?
 
@@ -72,7 +81,7 @@ model User {
 
 model Session {
   id           String   @id @default(uuid())
-  sessionToken String   @unique // O token do cookie
+  sessionToken String   @unique 
   userId       String
   expires      DateTime
   createdAt    DateTime @default(now())
@@ -80,7 +89,7 @@ model Session {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// --- GRAFO SOCIAL (QUEM SEGUE QUEM) ---
+// --- GRAFO SOCIAL ---
 
 model Follows {
   follower    User   @relation("follower", fields: [followerId], references: [id])
@@ -90,7 +99,7 @@ model Follows {
 
   createdAt DateTime @default(now())
 
-  @@id([followerId, followingId]) // Chave composta
+  @@id([followerId, followingId]) 
 }
 
 // --- COMUNIDADES (PROJETOS) ---
@@ -99,25 +108,31 @@ model Project {
   id          String   @id @default(uuid())
   name        String
   description String?
-  slug        String?  @unique // Ex: rocketseat-education
+  slug        String?  @unique 
   isPublic    Boolean  @default(true)
   avatarUrl   String?
   bannerUrl   String?
-  tags        String[] @default([]) // Tags da comunidade
+  tags        String[] @default([]) 
   createdAt   DateTime @default(now())
 
-  // Dono (Criador)
-  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  ownerId String
+  // Links sociais do projeto (Discord, GitHub, Site)
+  socialLinks Json?    
 
-  // Membros (Quem participa)
+  // Dono
+  owner    User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId  String
+
+  // Membros
   members Member[]
   
-  // Seguidores (Quem acompanha o feed sem ser membro)
+  // Seguidores
   followers FollowProject[]
 
   // Conteúdo
   posts Post[] 
+  
+  // Notificações relacionadas (Convites)
+  notifications Notification[]
 }
 
 model Member {
@@ -125,15 +140,13 @@ model Member {
   role      Role     @default(MEMBER)
   joinedAt  DateTime @default(now())
 
-  // Relação User
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
   
-  // Relação Project
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId String
 
-  @@unique([userId, projectId]) // Um usuário só entra uma vez no projeto
+  @@unique([userId, projectId]) 
 }
 
 model FollowProject {
@@ -148,24 +161,21 @@ model FollowProject {
   @@unique([userId, projectId])
 }
 
-// --- FEED (POSTS E INTERAÇÕES) ---
+// --- FEED ---
 
 model Post {
   id        String    @id @default(uuid())
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  deletedAt DateTime? // Soft delete
+  deletedAt DateTime? 
 
-  title   String?   // Opcional agora (estilo Twitter/Bluesky)
-  content Json      // Rich text / blocos
+  title   String?   
+  content Json      
   type    PostType  @default(TEXT)
   
-  // Relações
   author    User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId  String
   
-  // Projeto é opcional no banco para permitir flexibilidade futura,
-  // mas na regra de negócio atual será obrigatório.
   project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId String?
 
@@ -192,44 +202,46 @@ model Comment {
   parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
   replies   Comment[] @relation("CommentReplies")
 
-  votes     Vote[]   
+  votes     Vote[]    
 }
 
 model Vote {
   id        String   @id @default(uuid())
-  value     Int      // 1 ou -1
+  value     Int      
   
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   
-  postId    String?  // <--- AGORA É OPCIONAL (?)
+  postId    String?  
   post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   commentId String?
   comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
 
-  // Garante que o usuário só vota uma vez por post OU por comentário
   @@unique([userId, postId, commentId]) 
 }
 
+// --- NOTIFICAÇÕES (Atualizado) ---
+
 model Notification {
   id        String   @id @default(uuid())
-  type      String   // 'LIKE', 'COMMENT', 'FOLLOW', 'REPLY'
-  content   String   // Texto curto. Ex: "curtiu seu post"
+  type      NotificationType // Agora usa Enum
+  content   String   
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  // Quem recebe a notificação
   userId    String
   user      User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
 
-  // Quem gerou a notificação (Opcional, pois pode ser sistema)
   triggerUserId String?
   triggerUser   User?   @relation("TriggerUser", fields: [triggerUserId], references: [id])
 
-  // Links opcionais para onde a notificação leva
   postId    String?
-  projectId String?
+  
+  // Campos para Convites de Projeto
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  inviteRole  Role?    // Cargo oferecido no convite
 }
 
 model Message {
