@@ -45,7 +45,7 @@ export default function CommunityPage() {
     <AppShell>
       <Sidebar />
 
-      <div className="flex-1 min-w-0 pb-20 pt-8 px-6 max-w-6xl mx-auto w-full">
+      <div className="flex-1 min-w-0 pb-20 px-6 max-w-6xl mx-auto w-full">
         
         {/* Header Simples */}
         <div className="mb-8">
