@@ -60,11 +60,9 @@ export function ProjectSidebar({ groupedMembers }: ProjectSidebarProps) {
     };
 
     return (
-        <aside className="hidden lg:flex flex-col w-72 sticky top-24 max-h-[calc(100vh-7rem)] shrink-0">
-            {/* CONTAINER ESTILO CARD FLUTUANTE (Igual à Sidebar Esquerda) */}
-            <div className="flex flex-col h-full border border-zinc-800/50 bg-zinc-900/40 backdrop-blur-xl p-4 rounded-2xl shadow-xl shadow-black/20 overflow-y-auto custom-scrollbar sticky">
+        <aside className="hidden lg:flex flex-col w-72 sticky top-24 h-[calc(100vh-6rem)] shrink-0">
+                        <div className="flex flex-col h-full border border-zinc-800/50 bg-zinc-900/40 backdrop-blur-xl p-4 rounded-2xl shadow-xl shadow-black/20 overflow-y-auto custom-scrollbar">
                 
-                {/* Headerzinho opcional para a lista de membros */}
                 <div className="mb-4 pb-4 border-b border-zinc-800/50 px-2">
                     <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
                         <User size={16} /> Membros do Projeto

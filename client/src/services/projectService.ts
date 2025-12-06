@@ -41,6 +41,12 @@ export interface CreateProjectData {
   description?: string;
   tags?: string[];
   avatarUrl?: string;
+  bannerUrl?: string;
+  socialLinks?: {
+    github?: string;
+    discord?: string;
+    website?: string;
+  };
 }
 
 export const projectService = {
@@ -65,5 +71,10 @@ export const projectService = {
 
   leave: async (idOrSlug: string) => {
     await api.delete(`/projects/${idOrSlug}/leave`);
-  }
+  },
+
+  update: async (id: string, data: Partial<CreateProjectData>) => {
+      const { data: updated } = await api.patch(`/projects/${id}`, data);
+      return updated;
+  },
 };

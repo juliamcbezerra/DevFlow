@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards, Req, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, UseGuards, Req, Query, Patch } from '@nestjs/common';
 import { ProjectService } from './project.service';
 import { JwtGuard } from '../jwt/jwt.guard';
 import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
 import { Role } from '@prisma/client';
 
 @UseGuards(JwtGuard)
@@ -53,5 +54,10 @@ export class ProjectController {
   @Get('tags/popular')
   getTags() {
     return this.projectService.getPopularTags();
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateProjectDto, @Req() req: any) {
+    return this.projectService.update(id, req.user.id, dto);
   }
 }

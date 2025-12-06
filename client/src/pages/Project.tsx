@@ -6,11 +6,12 @@ import { useAuth } from "../context/AuthContext";
 import { projectService } from "../services/projectService";
 import { CreatePostWidget } from "../components/feed/CreatePostWidget"; 
 import { RichTextDisplay } from "../components/feed/RichTextDisplay";
-import { PostOptions } from "../components/feed/PostOptions"; // ✅ Recuperado
+import { PostOptions } from "../components/feed/PostOptions"; 
 import { ProjectSidebar } from "../components/projects/ProjectSidebar"; 
+import { EditProjectModal } from "../components/projects/EditProjectModal";
 import api from "../services/api"; 
 import { 
-    Loader2, MessageCircle, ArrowBigUp, ArrowBigDown, 
+    Loader2, MessageCircle, ArrowBigUp, ArrowBigDown, Settings, 
     Share2, Users, ShieldCheck, Terminal, LogOut, UserPlus, X, Crown
 } from "lucide-react";
 
@@ -30,6 +31,7 @@ export default function ProjectPage() {
   const [joining, setJoining] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   
   // Estados do Modal de Convite
   const [inviteUsername, setInviteUsername] = useState("");
@@ -141,7 +143,7 @@ export default function ProjectPage() {
       <div className="flex-1 flex min-w-0 pb-20 px-6 max-w-7xl mx-auto w-full gap-6">
         
         {/* === ÁREA CENTRAL === */}
-        <div className="flex-1 min-w-0 space-y-6 pt-8">
+        <div className="flex-1 min-w-0 space-y-6">
             
             {/* HEADER RICO */}
             <div className="relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/50 backdrop-blur-xl shadow-lg">
@@ -167,12 +169,21 @@ export default function ProjectPage() {
                         </div>
 
                         <div className="flex items-center gap-2 mt-4 sm:mt-0">
+                            {/* BOTÃO EDITAR (SÓ PARA DONO) */}
+                            {project.myRole === 'OWNER' && (
+                                <button 
+                                    onClick={() => setShowEditModal(true)} 
+                                    className="p-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded-xl border border-zinc-700 transition-all"
+                                    title="Editar Projeto"
+                                >
+                                    <Settings size={18} />
+                                </button>
+                            )}
                             {canInvite && (
                                 <button onClick={() => setShowInviteModal(true)} className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-bold text-xs border border-zinc-700 flex items-center gap-2 transition-all">
                                     <UserPlus size={14}/> <span className="hidden sm:inline">Convidar</span>
                                 </button>
-                            )}
-                            
+                            )}                           
                             <button 
                                 onClick={handleJoinLeave} 
                                 disabled={joining} 
@@ -321,7 +332,15 @@ export default function ProjectPage() {
               </div>
           </div>
       )}
-
+    {showEditModal && (
+        <EditProjectModal 
+            project={project} 
+            onClose={() => setShowEditModal(false)}
+            onUpdateSuccess={(updatedProj) => {
+                setProject((prev: any) => ({ ...prev, ...updatedProj }));
+            }}
+        />
+    )}
     </AppShell>
   );
 }

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ConflictException, ForbiddenException } 
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationService } from '../notification/notification.service';
 import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
 import { NotificationType, Role } from '@prisma/client';
 
 @Injectable()
@@ -182,4 +183,23 @@ async getPopularTags() {
         return [];
     }
   }
+
+async update(id: string, userId: string, dto: UpdateProjectDto) {
+  const project = await this.prisma.project.findUnique({ where: { id } });
+
+  if (!project) {
+    throw new NotFoundException('Projeto não encontrado');
+  }
+
+  if (project.ownerId !== userId) {
+    throw new ForbiddenException('Apenas o dono pode editar este projeto');
+  }
+
+  return this.prisma.project.update({
+    where: { id },
+    data: {
+      ...dto,
+    },
+  });
+ }
 }
