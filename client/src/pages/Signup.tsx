@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { SignupForm, FormDataCadastro } from '../components/auth/signup-form/SignupForm';
 import api from '../services/api'; 
 import { useAuth } from '../context/AuthContext';
+import { motion, Variants } from 'framer-motion';
+import { Code2, Sparkles, Layers, GitPullRequestArrow } from 'lucide-react';
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -15,7 +17,6 @@ export default function SignupPage() {
     try {
       setError('');
       setLoading(true);
-
       await api.post('/auth/signup', {
         name: dados.nome + ' ' + dados.sobrenome,
         username: dados.username, 
@@ -23,32 +24,92 @@ export default function SignupPage() {
         password: dados.password,
         birthDate: dados.birthDate
       });
-
-      // Login automático após cadastro
       await signIn({ login: dados.email, password: dados.password });
-      navigate('/onboarding'); // Redireciona para Onboarding
-
+      navigate('/onboarding');
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Erro ao criar conta.';
-      // Backend costuma devolver array de erros
       setError(Array.isArray(msg) ? msg[0] : msg);
     } finally {
       setLoading(false);
     }
   };
 
+  const auroraVariant: Variants = {
+    animate: {
+      scale: [1, 1.2, 1],
+      opacity: [0.2, 0.4, 0.2],
+      rotate: [0, -5, 0],
+      transition: { duration: 18, repeat: Infinity, ease: "linear" }
+    }
+  };
+
+  const cardVariant: Variants = {
+    hidden: { opacity: 0, scale: 0.95 },
+    visible: { 
+      opacity: 1, scale: 1,
+      transition: { duration: 0.5, ease: "easeOut" }
+    }
+  };
+
+  const floatingWidgetVariant: Variants = {
+    animate: {
+        y: [0, -12, 0],
+        rotate: [1, -1, 1],
+        transition: { duration: 6, repeat: Infinity, ease: "easeInOut" }
+    }
+  };
+
   return (
-    <div className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-zinc-950">
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#020205] text-zinc-100 relative overflow-hidden p-4">
       
-      {/* --- COLUNA ESQUERDA: FORMULÁRIO --- */}
-      <div className="flex flex-col items-center justify-center p-8 sm:p-24 order-1 bg-zinc-950">
-        <div className="w-full max-w-md space-y-8">
+      {/* BACKGROUND */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04] mix-blend-overlay"></div>
+        <motion.div variants={auroraVariant} animate="animate" className="absolute top-[-20%] right-[-10%] w-[70vw] h-[70vh] bg-violet-600/15 rounded-full blur-[130px] mix-blend-screen" />
+        <motion.div variants={auroraVariant} animate="animate" transition={{ delay: 3 }} className="absolute bottom-[-20%] left-[-10%] w-[70vw] h-[70vh] bg-orange-600/10 rounded-full blur-[130px] mix-blend-screen" />
+      </div>
+
+      {/* WIDGETS */}
+      <motion.div 
+          variants={floatingWidgetVariant}
+          animate="animate"
+          className="absolute top-32 left-[5%] hidden xl:flex items-center gap-3 bg-zinc-900/40 backdrop-blur-md border border-white/10 p-3 rounded-xl shadow-lg z-0"
+      >
+          <div className="bg-violet-500/20 p-2 rounded-lg"><Layers size={18} className="text-violet-400"/></div>
+          <div><div className="text-[10px] text-zinc-400">Descoberta</div><div className="text-xs font-bold text-white">Nova stack detectada</div></div>
+      </motion.div>
+
+      <motion.div 
+          variants={floatingWidgetVariant}
+          animate="animate"
+          transition={{ delay: 1.5 }}
+          className="absolute bottom-32 right-[5%] hidden xl:flex items-center gap-3 bg-zinc-900/40 backdrop-blur-md border border-white/10 p-3 rounded-xl shadow-lg z-0"
+      >
+          <div className="bg-green-500/20 p-2 rounded-lg"><GitPullRequestArrow size={18} className="text-green-400"/></div>
+          <div><div className="text-[10px] text-zinc-400">Colaboração</div><div className="text-xs font-bold text-white">PR Aprovado!</div></div>
+      </motion.div>
+
+      {/* CARD CENTRALIZADO (Mais compacto: max-w-xl) */}
+      <motion.div 
+        variants={cardVariant}
+        initial="hidden"
+        animate="visible"
+        className="relative z-10 w-full max-w-xl" 
+      >
+        <div className="absolute -inset-0.5 bg-linear-to-r from-violet-600/40 to-orange-600/40 rounded-2xl blur-lg opacity-30"></div>
+
+        {/* Padding reduzido: p-6 md:p-8 */}
+        <div className="relative bg-zinc-900/70 backdrop-blur-xl border border-white/10 p-6 md:p-8 rounded-2xl shadow-2xl">
           
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold text-white tracking-tight">Crie sua conta</h2>
-            <p className="text-zinc-400">
-              Preencha seus dados para entrar na comunidade.
-            </p>
+          {/* Header Compacto */}
+          <div className="flex flex-col items-center text-center space-y-3 mb-6">
+             <div className="flex items-center justify-center gap-2">
+                <div className="bg-linear-to-tr from-violet-600 to-indigo-600 p-1.5 rounded-lg shadow-lg shadow-violet-500/20">
+                    <Code2 size={20} className="text-white" strokeWidth={2.5} />
+                </div>
+                <span className="text-xl font-bold tracking-tight text-white">Dev<span className="text-violet-500">Flow</span></span>
+            </div>
+             <h1 className="text-2xl font-bold text-white tracking-tight">Crie sua Identidade</h1>
           </div>
 
           <SignupForm 
@@ -57,99 +118,16 @@ export default function SignupPage() {
             error={error} 
           />
 
-          <p className="text-center text-xs text-zinc-500 mt-8">
+          <p className="text-center text-xs text-zinc-500 mt-6 leading-relaxed border-t border-white/5 pt-4">
             Ao se registrar, você concorda com nossos Termos de Uso.
+            <br />
+            <span className="block mt-1 text-sm text-zinc-400">
+                Já possui uma conta? <Link to="/login" className="text-violet-400 hover:text-violet-300 font-bold hover:underline">Fazer Login</Link>
+            </span>
           </p>
-        </div>
-      </div>
-
-      {/* --- COLUNA DIREITA: VISUAL RICO (Card de Código) --- */}
-      <div className="hidden lg:flex flex-col items-center justify-center relative bg-zinc-900 overflow-hidden order-2 border-l border-zinc-800">
-        
-        {/* 1. Background Noise & Gradient */}
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light"></div>
-        <div className="absolute top-[-20%] right-[-20%] w-[600px] h-[600px] bg-violet-600/20 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-[-20%] left-[-20%] w-[600px] h-[600px] bg-orange-600/20 rounded-full blur-[120px]"></div>
-
-        {/* 2. O CONTEÚDO CENTRAL */}
-        <div className="relative z-10 w-full max-w-lg px-8 flex flex-col gap-8">
-          
-          {/* Texto de Impacto */}
-          <div className="text-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-medium mb-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
-              </span>
-              Comunidade Ativa
-            </div>
-            <h1 className="text-4xl font-bold text-white leading-tight">
-              Evolua seu código com <br/>
-              <span className="text-transparent bg-clip-text bg-linear-to-r from-violet-400 to-orange-400">Feedback Real</span>
-            </h1>
-          </div>
-
-          {/* 3. O "CARD DE CÓDIGO" FLUTUANTE (Glassmorphism) */}
-          <div className="relative group perspective-1000">
-            {/* Efeito de brilho atrás do card */}
-            <div className="absolute -inset-1 bg-linear-to-r from-violet-600 to-orange-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-            
-            {/* O Card em si */}
-            <div className="relative bg-zinc-900/90 backdrop-blur-xl ring-1 ring-zinc-700/50 rounded-xl shadow-2xl overflow-hidden transform rotate-2 hover:rotate-0 transition-all duration-500 ease-out">
-              
-              {/* Barra de título do editor */}
-              <div className="flex items-center px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
-                <div className="flex space-x-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                </div>
-                <div className="ml-4 text-xs text-zinc-500 font-mono">DevFlow.tsx</div>
-              </div>
-
-              {/* Conteúdo do Código */}
-              <div className="p-6 font-mono text-sm text-zinc-300 space-y-2 leading-relaxed bg-zinc-950/50">
-                <div className="flex">
-                  <span className="text-zinc-600 w-6 select-none">1</span>
-                  <span><span className="text-violet-400">interface</span> <span className="text-yellow-300">Developer</span> {'{'}</span>
-                </div>
-                <div className="flex">
-                  <span className="text-zinc-600 w-6 select-none">2</span>
-                  <span className="pl-4">skills: <span className="text-orange-400">['React', 'Node', 'DevOps']</span>;</span>
-                </div>
-                <div className="flex">
-                  <span className="text-zinc-600 w-6 select-none">3</span>
-                  <span className="pl-4">level: <span className="text-green-400">'Senior'</span>;</span>
-                </div>
-                <div className="flex">
-                  <span className="text-zinc-600 w-6 select-none">4</span>
-                  <span>{'}'}</span>
-                </div>
-                <div className="flex mt-2">
-                  <span className="text-zinc-600 w-6 select-none">5</span>
-                  <span className="text-zinc-500">// Junte-se a 10.000+ devs</span>
-                </div>
-                <div className="flex">
-                  <span className="text-zinc-600 w-6 select-none">6</span>
-                  <span><span className="text-violet-400">const</span> community = <span className="text-blue-400">await</span> DevFlow.<span className="text-yellow-300">join</span>();</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Elemento Flutuante Extra (Tag) */}
-            <div className="absolute -bottom-6 -right-6 bg-zinc-800 border border-zinc-700 p-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce [animation-duration:3s]">
-              <div className="bg-green-500/20 p-1.5 rounded-md">
-                 <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-              </div>
-              <div className="text-xs">
-                <div className="text-zinc-400">Status</div>
-                <div className="font-bold text-white">Approved</div>
-              </div>
-            </div>
-          </div>
 
         </div>
-      </div>
+      </motion.div>
 
     </div>
   );
