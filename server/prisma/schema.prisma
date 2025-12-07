@@ -44,6 +44,7 @@ model User {
   bannerUrl    String?
   bio          String?
   location     String?
+  profilePic String?
   interestTags String[] @default([]) 
   socialLinks  Json?
   createdAt    DateTime @default(now())
@@ -112,6 +113,8 @@ model Project {
   isPublic    Boolean  @default(true)
   avatarUrl   String?
   bannerUrl   String?
+  bannerImage  String?
+  projectImage String?
   tags        String[] @default([]) 
   createdAt   DateTime @default(now())
 
@@ -154,6 +157,9 @@ model FollowProject {
   userId    String
   projectId String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  images    String[]
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)

@@ -5,10 +5,11 @@ import {
   IsString,
   MinLength,
   IsOptional,
+  IsUrl,
   IsDateString, 
   IsBoolean,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger'; 
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'; 
 
 export interface UserDto {
   id: string;
@@ -16,6 +17,7 @@ export interface UserDto {
   name: string | null;
   password: string;
   createdAt: Date;
+  profilePic: string | null;
 }
 
 export class CreateUserDto {
@@ -54,6 +56,15 @@ export class CreateUserDto {
   @MinLength(8, { message: 'A senha deve ter pelo menos 8 caracteres' })
   password: string;
 
+  @ApiPropertyOptional({
+    description: 'URL da foto de perfil (retornada pelo endpoint de upload)',
+    example: 'https://meu-bucket-s3.amazonaws.com/avatar-123.jpg',
+  })
+  @IsOptional()
+  @IsString()
+  @IsUrl({}, { message: 'A foto de perfil deve ser uma URL válida' })
+  profilePic?: string;
+  
   @ApiProperty({ example: '2000-12-25', description: 'Data de nascimento (YYYY-MM-DD)' })
   @IsDateString() 
   @IsNotEmpty()

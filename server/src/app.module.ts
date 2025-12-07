@@ -4,6 +4,7 @@ import { UserModule } from './modules/user/user.module';
 import { ChatModule } from './modules/chat/chat.module'; 
 import { SocialModule } from './modules/social/social.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { UploadModule } from './upload/upload.module';
 import { ProjectModule } from './modules/project/project.module';
 import { GatewayModule } from './gateway/gateway.module';
 
@@ -16,6 +17,7 @@ import { GatewayModule } from './gateway/gateway.module';
     SocialModule,
     ProjectModule,
     GatewayModule,
+    UploadModule
   ],
   controllers: [],
   providers: [],
