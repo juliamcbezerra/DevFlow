@@ -17,7 +17,6 @@ import { GatewayModule } from './gateway/gateway.module';
     SocialModule,
     ProjectModule,
     GatewayModule,
-    TaskModule,
     UploadModule
   ],
   controllers: [],
