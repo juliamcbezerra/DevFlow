@@ -18,10 +18,13 @@ const s3Config = new S3Client({
 });
 
 const ALLOWED_DIRECTORIES = {
-  pfp: 'profile-pics',
-  banners: 'project-banners',
-  project: 'project-pics',
-  posts: 'post-images'
+  'profile-pictures': 'profile-pictures',
+  'user-banners': 'user-banners',
+  'project-images': 'project-images',
+  'project-banners': 'project-banners',
+  posts: 'posts',
+  comments: 'comments',
+  'message-images': 'message-images',
 }
 
 const multerConfig = {
