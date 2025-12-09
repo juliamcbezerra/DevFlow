@@ -24,6 +24,7 @@ export class ProjectService {
         description: dto.description,
         tags: dto.tags || [],
         avatarUrl: dto.avatarUrl,
+        bannerUrl: dto.bannerUrl,
         ownerId: userId,
         members: { create: { userId: userId, role: 'OWNER' } }
       },
@@ -164,6 +165,23 @@ export class ProjectService {
 
     await this.prisma.member.delete({ where: { userId_projectId: { userId, projectId: project.id } } });
     return { message: 'Saiu.' };
+  }
+
+  // Deletar projeto (apenas o dono)
+  async deleteProject(projectIdOrSlug: string, userId: string) {
+    const project = await this.prisma.project.findFirst({ 
+      where: { OR: [{ id: projectIdOrSlug }, { slug: projectIdOrSlug }] }, 
+      select: { id: true, ownerId: true } 
+    });
+    
+    if (!project) throw new NotFoundException('Projeto não encontrado');
+    if (project.ownerId !== userId) throw new ForbiddenException('Apenas o dono pode deletar este projeto');
+
+    // Deleta membros primeiro, depois o projeto
+    await this.prisma.member.deleteMany({ where: { projectId: project.id } });
+    await this.prisma.project.delete({ where: { id: project.id } });
+    
+    return { message: 'Projeto deletado com sucesso' };
   }
 
 async getPopularTags() {

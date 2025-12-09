@@ -103,5 +103,17 @@ export const userService = {
   updateProfile: async (data: UpdateProfileData) => {
     const response = await api.patch('/users/me', data);
     return response.data;
+  },
+
+  // 7. Buscar Followers de um usuário
+  getFollowers: async (username: string) => {
+    const { data } = await api.get<User[]>(`/users/${username}/followers`);
+    return data;
+  },
+
+  // 8. Buscar Following de um usuário
+  getFollowing: async (username: string) => {
+    const { data } = await api.get<User[]>(`/users/${username}/following`);
+    return data;
   }
 };

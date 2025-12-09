@@ -38,4 +38,14 @@ export class UserController {
     // O Service vai salvar no banco E enviar a notificação.
     return this.userService.toggleFollow(req.user.id, username);
   }
+
+  @Get(':username/followers')
+  async getFollowers(@Param('username') username: string) {
+    return this.userService.getFollowers(username);
+  }
+
+  @Get(':username/following')
+  async getFollowing(@Param('username') username: string) {
+    return this.userService.getFollowing(username);
+  }
 }

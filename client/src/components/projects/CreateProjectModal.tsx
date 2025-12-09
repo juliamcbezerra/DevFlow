@@ -62,8 +62,8 @@ export function CreateProjectModal({ onClose }: CreateProjectModalProps) {
                 slug: formData.slug,
                 description: formData.description,
                 tags: tagsArray,
-                avatarUrl: formData.avatarUrl,
-                bannerUrl: formData.bannerUrl,
+                avatarUrl: formData.avatarUrl || undefined,
+                bannerUrl: formData.bannerUrl || undefined,
                 socialLinks: {
                     github: formData.github,
                     discord: formData.discord,
@@ -73,7 +73,7 @@ export function CreateProjectModal({ onClose }: CreateProjectModalProps) {
 
             const { data } = await api.post('/projects/create', payload);
             onClose();
-            navigate(`/projects/${data.slug}`); // Redireciona para o projeto criado
+            navigate(`/projects/${data.slug}`);
         } catch (error: any) {
             alert(error.response?.data?.message || "Erro ao criar projeto.");
         } finally {

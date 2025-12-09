@@ -137,4 +137,64 @@ export class UserService {
       return { isFollowing: true };
     }
   }
+
+  // 6. Buscar Seguidores
+  async getFollowers(username: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { username },
+      select: { id: true }
+    });
+
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    const followers = await this.prisma.follows.findMany({
+      where: { followingId: user.id },
+      select: {
+        follower: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            avatarUrl: true,
+            interestTags: true,
+            bannerUrl: true,
+            location: true,
+            _count: { select: { followedBy: true } }
+          }
+        }
+      }
+    });
+
+    return followers.map(f => f.follower);
+  }
+
+  // 7. Buscar Seguindo
+  async getFollowing(username: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { username },
+      select: { id: true }
+    });
+
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    const following = await this.prisma.follows.findMany({
+      where: { followerId: user.id },
+      select: {
+        following: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            avatarUrl: true,
+            interestTags: true,
+            bannerUrl: true,
+            location: true,
+            _count: { select: { followedBy: true } }
+          }
+        }
+      }
+    });
+
+    return following.map(f => f.following);
+  }
 }

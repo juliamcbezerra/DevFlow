@@ -12,7 +12,7 @@ import { EditProjectModal } from "../components/projects/EditProjectModal";
 import api from "../services/api"; 
 import { 
     Loader2, MessageCircle, ArrowBigUp, ArrowBigDown, Settings, 
-    Share2, Users, ShieldCheck, Terminal, LogOut, UserPlus, X, Crown
+    Share2, Users, ShieldCheck, Terminal, LogOut, UserPlus, X, Crown, Trash2
 } from "lucide-react";
 
 // Estilo do Card Rico (Recuperado da versão antiga)
@@ -52,7 +52,7 @@ export default function ProjectPage() {
     loadData();
   }, [id]);
 
-  // --- Lógica de Entrar/Sair ---
+  // --- Lógica de Entrar/Sair/Deletar ---
   const handleJoinLeave = async () => {
       if (!project) return;
       setJoining(true);
@@ -67,6 +67,22 @@ export default function ProjectPage() {
       } catch (err) {
           console.error(err);
       } finally {
+          setJoining(false);
+      }
+  };
+
+  const handleDeleteProject = async () => {
+      if (!project) return;
+      if (!window.confirm("Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita.")) return;
+      
+      setJoining(true);
+      try {
+          await projectService.delete(project.id);
+          navigate('/feed');
+      } catch (err: any) {
+          console.error("Erro ao deletar projeto:", err);
+          const errorMsg = err.response?.data?.message || "Erro ao excluir projeto";
+          alert(errorMsg);
           setJoining(false);
       }
   };
@@ -147,7 +163,15 @@ export default function ProjectPage() {
             
             {/* HEADER RICO */}
             <div className="relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/50 backdrop-blur-xl shadow-lg">
-                <div className={`h-32 w-full bg-linear-to-r from-violet-900/40 to-blue-900/40`}></div>
+                <div className={`h-32 w-full bg-linear-to-r from-violet-900/40 to-blue-900/40 relative overflow-hidden`}>
+                    {project.bannerUrl ? (
+                        <img src={project.bannerUrl} className="w-full h-full object-cover" alt="Banner"/>
+                    ) : (
+                        <div className="w-full h-full bg-linear-to-r from-violet-900/40 to-blue-900/40">
+                            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light"></div>
+                        </div>
+                    )}
+                </div>
                 
                 <div className="px-6 pb-6">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end -mt-10 mb-4 gap-4">
@@ -184,17 +208,27 @@ export default function ProjectPage() {
                                     <UserPlus size={14}/> <span className="hidden sm:inline">Convidar</span>
                                 </button>
                             )}                           
-                            <button 
-                                onClick={handleJoinLeave} 
-                                disabled={joining} 
-                                className={`px-6 py-2.5 rounded-xl font-bold text-xs transition-all shadow-lg flex items-center gap-2 ${
-                                    project.isMember 
-                                    ? 'bg-zinc-800 border border-zinc-700 text-zinc-300 hover:border-red-500/50 hover:text-red-400 hover:bg-zinc-900' 
-                                    : 'bg-violet-600 hover:bg-violet-700 text-white hover:scale-105'
-                                }`}
-                            >
-                                {joining ? <Loader2 className="animate-spin w-4 h-4"/> : (project.isMember ? <><LogOut size={14}/> Sair</> : <><UserPlus size={14}/> Participar</>)}
-                            </button>
+                            {project.myRole === 'OWNER' ? (
+                                <button 
+                                    onClick={handleDeleteProject} 
+                                    disabled={joining} 
+                                    className={`px-6 py-2.5 rounded-xl font-bold text-xs transition-all shadow-lg flex items-center gap-2 bg-red-600/20 border border-red-500/50 text-red-400 hover:bg-red-600/30 hover:border-red-500 hover:text-red-300`}
+                                >
+                                    {joining ? <Loader2 className="animate-spin w-4 h-4"/> : <><Trash2 size={14}/> Excluir Projeto</>}
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={handleJoinLeave} 
+                                    disabled={joining} 
+                                    className={`px-6 py-2.5 rounded-xl font-bold text-xs transition-all shadow-lg flex items-center gap-2 ${
+                                        project.isMember 
+                                        ? 'bg-zinc-800 border border-zinc-700 text-zinc-300 hover:border-red-500/50 hover:text-red-400 hover:bg-zinc-900' 
+                                        : 'bg-violet-600 hover:bg-violet-700 text-white hover:scale-105'
+                                    }`}
+                                >
+                                    {joining ? <Loader2 className="animate-spin w-4 h-4"/> : (project.isMember ? <><LogOut size={14}/> Sair</> : <><UserPlus size={14}/> Participar</>)}
+                                </button>
+                            )}
                         </div>
                     </div>
 

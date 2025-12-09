@@ -1,6 +1,8 @@
 import { MapPin, Calendar, Link as LinkIcon, Edit3, UserPlus, UserCheck, Github, Linkedin, Instagram, Globe, MessageCircle } from "lucide-react";
 import { UserProfile } from "../services/userService";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { FollowersModal } from "../components/followers/FollowersModal";
 
 interface ProfileHeaderProps {
   profile: UserProfile;
@@ -39,6 +41,8 @@ function SocialIconLink({ type, url }: { type: string, url?: string }) {
 
 export function ProfileHeader({ profile, onFollowToggle }: ProfileHeaderProps) {
   const navigate = useNavigate();
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
   
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
@@ -171,15 +175,34 @@ export function ProfileHeader({ profile, onFollowToggle }: ProfileHeaderProps) {
 
           {/* 5. STATS */}
           <div className="flex gap-12 py-6 border-t border-zinc-800/50 mt-4">
-            <div className="flex flex-col items-start">
-              <span className="font-bold text-white text-xl">{profile._count.following}</span>
-              <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Seguindo</span>
-            </div>
-            <div className="flex flex-col items-start">
-              <span className="font-bold text-white text-xl">{profile._count.followedBy}</span>
-              <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Seguidores</span>
-            </div>
+            <button 
+              onClick={() => setShowFollowingModal(true)}
+              className="flex flex-col items-start hover:opacity-80 transition-opacity cursor-pointer group"
+            >
+              <span className="font-bold text-white text-xl group-hover:text-violet-400 transition-colors">{profile._count.following}</span>
+              <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest group-hover:text-zinc-400 transition-colors">Seguindo</span>
+            </button>
+            <button 
+              onClick={() => setShowFollowersModal(true)}
+              className="flex flex-col items-start hover:opacity-80 transition-opacity cursor-pointer group"
+            >
+              <span className="font-bold text-white text-xl group-hover:text-violet-400 transition-colors">{profile._count.followedBy}</span>
+              <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest group-hover:text-zinc-400 transition-colors">Seguidores</span>
+            </button>
           </div>
+
+          <FollowersModal 
+            username={profile.username} 
+            type="followers" 
+            isOpen={showFollowersModal} 
+            onClose={() => setShowFollowersModal(false)}
+          />
+          <FollowersModal 
+            username={profile.username} 
+            type="following" 
+            isOpen={showFollowingModal} 
+            onClose={() => setShowFollowingModal(false)}
+          />
         </div>
       </div>
     </div>

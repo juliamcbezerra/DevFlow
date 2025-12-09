@@ -51,6 +51,11 @@ export class ProjectController {
     return this.projectService.leaveProject(id, req.user.id);
   }
 
+  @Delete(':id')
+  delete(@Param('id') id: string, @Req() req: any) {
+    return this.projectService.deleteProject(id, req.user.id);
+  }
+
   @Get('tags/popular')
   getTags() {
     return this.projectService.getPopularTags();

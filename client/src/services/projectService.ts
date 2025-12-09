@@ -77,4 +77,8 @@ export const projectService = {
       const { data: updated } = await api.patch(`/projects/${id}`, data);
       return updated;
   },
+
+  delete: async (id: string) => {
+      await api.delete(`/projects/${id}`);
+  },
 };
