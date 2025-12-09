@@ -61,28 +61,29 @@ export function FollowersModal({ username, type, isOpen, onClose, onFollowersUpd
       await userService.toggleFollow(user.username);
       
       if (type === 'following') {
-        // Remover de "Seguindo"
+        // Remover de "Seguindo" - removemos porque deixamos de seguir
         setUsers(prev => prev.filter(u => u.id !== user.id));
+        // Chamar callback para atualizar perfil
         if (onFollowersUpdate) {
           onFollowersUpdate(users.length - 1);
         }
       } else {
-        // Em "Seguidores"
+        // Em "Seguidores" - NÃO removemos da lista, apenas atualizamos estado
         const isFollowing = followingSet.has(user.id);
         if (isFollowing) {
-          // Estava seguindo, agora remover da lista
-          setUsers(prev => prev.filter(u => u.id !== user.id));
+          // Estava seguindo este seguidor, agora deixamos de seguir
           setFollowingSet(prev => {
             const newSet = new Set(prev);
             newSet.delete(user.id);
             return newSet;
           });
-          if (onFollowersUpdate) {
-            onFollowersUpdate(users.length - 1);
-          }
         } else {
-          // Agora estamos seguindo
+          // Agora estamos seguindo este seguidor de volta
           setFollowingSet(prev => new Set(prev).add(user.id));
+        }
+        // Chamar callback para atualizar perfil (muda o count de "seguindo")
+        if (onFollowersUpdate) {
+          onFollowersUpdate(0); // Não importa o valor, apenas dispara refresh
         }
       }
       
@@ -94,7 +95,7 @@ export function FollowersModal({ username, type, isOpen, onClose, onFollowersUpd
     }
   };
 
-  // Determinar se pode ver o botão de ação (só no seu próprio perfil)
+  // Determinar se pode ver o botão de ação (só no próprio perfil)
   const isOwnProfile = currentUser?.username === username;
 
   // Determinar o ícone e label baseado no tipo e estado de follow

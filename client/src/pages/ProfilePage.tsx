@@ -59,6 +59,16 @@ export default function ProfilePage() {
     } catch (error) { console.error(error); }
   };
 
+  const refreshProfile = async () => {
+    if (!username) return;
+    try {
+      const userData = await userService.getByUsername(username);
+      setProfile(userData);
+    } catch (error) {
+      console.error("Erro ao recarregar perfil:", error);
+    }
+  };
+
   if (loading) return <AppShell><Sidebar/><div className="flex-1 flex justify-center items-center h-screen"><Loader2 className="animate-spin text-violet-500"/></div></AppShell>;
   
   if (!profile) return (
@@ -78,7 +88,7 @@ export default function ProfilePage() {
 
       <div className="flex-1 min-w-0 pb-20 overflow-y-auto custom-scrollbar">
         
-        <ProfileHeader profile={profile} onFollowToggle={handleFollowToggle} />
+        <ProfileHeader profile={profile} onFollowToggle={handleFollowToggle} onRefresh={refreshProfile} />
 
         <div className="px-4 md:px-10 max-w-4xl">
             

@@ -7,6 +7,7 @@ import { FollowersModal } from "../components/followers/FollowersModal";
 interface ProfileHeaderProps {
   profile: UserProfile;
   onFollowToggle: () => void;
+  onRefresh?: () => Promise<void>;
 }
 
 // Helper Component para renderizar ícones sociais bonitos
@@ -39,7 +40,7 @@ function SocialIconLink({ type, url }: { type: string, url?: string }) {
     );
 }
 
-export function ProfileHeader({ profile, onFollowToggle }: ProfileHeaderProps) {
+export function ProfileHeader({ profile, onFollowToggle, onRefresh }: ProfileHeaderProps) {
   const navigate = useNavigate();
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [showFollowingModal, setShowFollowingModal] = useState(false);
@@ -196,9 +197,9 @@ export function ProfileHeader({ profile, onFollowToggle }: ProfileHeaderProps) {
             type="followers" 
             isOpen={showFollowersModal} 
             onClose={() => setShowFollowersModal(false)}
-            onFollowersUpdate={(newCount) => {
-              // Atualizar o perfil com o novo count de seguidores
-              // Este callback é chamado quando remove alguém dos seguidores
+            onFollowersUpdate={() => {
+              // Recarregar perfil quando muda status de seguir
+              if (onRefresh) onRefresh();
             }}
           />
           <FollowersModal 
@@ -206,8 +207,9 @@ export function ProfileHeader({ profile, onFollowToggle }: ProfileHeaderProps) {
             type="following" 
             isOpen={showFollowingModal} 
             onClose={() => setShowFollowingModal(false)}
-            onFollowersUpdate={(newCount) => {
-              // Atualizar o perfil com o novo count de seguindo (em "following" este é na verdade um "unfollow")
+            onFollowersUpdate={() => {
+              // Recarregar perfil quando muda status de seguir
+              if (onRefresh) onRefresh();
             }}
           />
         </div>
