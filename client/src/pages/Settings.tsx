@@ -6,6 +6,9 @@ import { useAuth } from "../context/AuthContext";
 import { userService } from "../services/userService";
 import api from "../services/api";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
+import { ImagePickerModal } from "../components/ui/ImagePickerModal";
+import { ImageInput } from "../components/ui/ImageInput";
+import { useImagePicker } from "../hooks/useImagePicker";
 import { 
     User, Shield, Trash2, Save, Loader2, 
     Camera, MapPin, Globe, Github, Linkedin, Layout, Instagram, KeyRound, Mail, Hash, X, Moon, Sun, Monitor
@@ -56,6 +59,21 @@ export default function SettingsPage() {
           portfolio: user?.socialLinks?.portfolio || "",
           instagram: user?.socialLinks?.instagram || ""
       }
+  });
+
+  // Image Pickers
+  const avatarPicker = useImagePicker({
+    onSuccess: (url) => {
+      setProfileData(prev => ({ ...prev, avatarUrl: url }));
+    },
+    folderType: "profile-pictures"
+  });
+
+  const bannerPicker = useImagePicker({
+    onSuccess: (url) => {
+      setProfileData(prev => ({ ...prev, bannerUrl: url }));
+    },
+    folderType: "user-banners"
   });
 
   // --- SEGURANÇA & MODAIS ---
@@ -173,8 +191,24 @@ export default function SettingsPage() {
 
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <InputGroup label="Avatar URL" icon={Camera} value={profileData.avatarUrl} onChange={(e: any) => setProfileData({...profileData, avatarUrl: e.target.value})} placeholder="https://..." />
-                            <InputGroup label="Capa URL" icon={Layout} value={profileData.bannerUrl} onChange={(e: any) => setProfileData({...profileData, bannerUrl: e.target.value})} placeholder="https://..." />
+                            <div>
+                                <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Avatar</label>
+                                <ImageInput
+                                    imageUrl={profileData.avatarUrl}
+                                    placeholder="Clique para adicionar"
+                                    onClick={avatarPicker.openPicker}
+                                    size="lg"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Capa</label>
+                                <ImageInput
+                                    imageUrl={profileData.bannerUrl}
+                                    placeholder="Clique para adicionar"
+                                    onClick={bannerPicker.openPicker}
+                                    size="lg"
+                                />
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -192,6 +226,26 @@ export default function SettingsPage() {
                             />
                         </div>
                     </div>
+
+                    {/* Image Picker Modals */}
+                    <ImagePickerModal
+                        isOpen={avatarPicker.isOpen}
+                        onClose={avatarPicker.closePicker}
+                        onImageSelect={avatarPicker.handleImageSelect}
+                        title="Foto de Perfil"
+                        description="Faça upload ou insira um link para sua foto de perfil"
+                        currentImage={profileData.avatarUrl}
+                        folderType="profile-pictures"
+                    />
+                    <ImagePickerModal
+                        isOpen={bannerPicker.isOpen}
+                        onClose={bannerPicker.closePicker}
+                        onImageSelect={bannerPicker.handleImageSelect}
+                        title="Capa do Perfil"
+                        description="Faça upload ou insira um link para a capa do seu perfil"
+                        currentImage={profileData.bannerUrl}
+                        folderType="user-banners"
+                    />
                 </section>
 
                 {/* CARD: INTERESSES (NOVO) */}

@@ -10,7 +10,6 @@ export class CreateCommentDto {
   @IsNotEmpty()
   content: string;
 
-  // --- DESCOMENTADO E ATUALIZADO AQUI 👇 ---
   @ApiProperty({
     description: 'ID do comentário pai (se for uma resposta a outro comentário)',
     example: '123e4567-e89b-12d3-a456-426614174000',
@@ -18,6 +17,5 @@ export class CreateCommentDto {
   })
   @IsOptional()
   @IsString()
-  // @IsUUID() // Se quiser validação estrita de UUID, descomente isso
   parentId?: string; 
 }

@@ -1,6 +1,9 @@
 import { useState } from "react";
-import { X, Loader2, Save, Camera, Sparkles } from "lucide-react";
+import { X, Loader2, Save } from "lucide-react";
 import { projectService } from "../../services/projectService";
+import { ImagePickerModal } from "../ui/ImagePickerModal";
+import { ImageInput } from "../ui/ImageInput";
+import { useImagePicker } from "../../hooks/useImagePicker";
 
 interface EditProjectModalProps {
   project: any;
@@ -20,6 +23,17 @@ export function EditProjectModal({ project, onClose, onUpdateSuccess }: EditProj
   // Tags
   const [tags, setTags] = useState<string[]>(project.tags || []);
   const [customTag, setCustomTag] = useState("");
+
+  // Image Pickers
+  const logoPicker = useImagePicker({
+    onSuccess: (url) => setAvatarUrl(url),
+    folderType: "project-images"
+  });
+
+  const bannerPicker = useImagePicker({
+    onSuccess: (url) => setBannerUrl(url),
+    folderType: "project-banners"
+  });
 
   const suggestedTags = [
     "React", "Node.js", "TypeScript", "Python", "DevOps", 
@@ -87,30 +101,44 @@ export function EditProjectModal({ project, onClose, onUpdateSuccess }: EditProj
             {/* Imagens (Avatar e Banner) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-zinc-500 uppercase">Avatar URL</label>
-                    <div className="flex items-center gap-3 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800 focus-within:border-violet-500/50 transition-colors">
-                        <Camera size={18} className="text-zinc-500"/>
-                        <input 
-                            value={avatarUrl}
-                            onChange={(e) => setAvatarUrl(e.target.value)}
-                            placeholder="https://..."
-                            className="bg-transparent w-full text-sm text-white focus:outline-none"
-                        />
-                    </div>
+                    <label className="text-xs font-bold text-zinc-500 uppercase">Logo do Projeto</label>
+                    <ImageInput
+                        imageUrl={avatarUrl}
+                        placeholder="Clique para adicionar"
+                        onClick={logoPicker.openPicker}
+                        size="lg"
+                    />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-zinc-500 uppercase">Banner URL</label>
-                    <div className="flex items-center gap-3 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800 focus-within:border-violet-500/50 transition-colors">
-                        <Sparkles size={18} className="text-zinc-500"/>
-                        <input 
-                            value={bannerUrl}
-                            onChange={(e) => setBannerUrl(e.target.value)}
-                            placeholder="https://..."
-                            className="bg-transparent w-full text-sm text-white focus:outline-none"
-                        />
-                    </div>
+                    <label className="text-xs font-bold text-zinc-500 uppercase">Banner do Projeto</label>
+                    <ImageInput
+                        imageUrl={bannerUrl}
+                        placeholder="Clique para adicionar"
+                        onClick={bannerPicker.openPicker}
+                        size="lg"
+                    />
                 </div>
             </div>
+
+            {/* Image Picker Modals */}
+            <ImagePickerModal
+                isOpen={logoPicker.isOpen}
+                onClose={logoPicker.closePicker}
+                onImageSelect={logoPicker.handleImageSelect}
+                title="Logo do Projeto"
+                description="Faça upload ou insira um link para o logo"
+                currentImage={avatarUrl}
+                folderType="project-images"
+            />
+            <ImagePickerModal
+                isOpen={bannerPicker.isOpen}
+                onClose={bannerPicker.closePicker}
+                onImageSelect={bannerPicker.handleImageSelect}
+                title="Banner do Projeto"
+                description="Faça upload ou insira um link para o banner"
+                currentImage={bannerUrl}
+                folderType="project-banners"
+            />
 
             {/* Nome */}
             <div className="space-y-2">

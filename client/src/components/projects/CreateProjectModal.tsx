@@ -2,6 +2,9 @@ import { useState } from "react";
 import { X, ChevronRight, ChevronLeft, Rocket, Hash, Image as ImageIcon, Link as LinkIcon, CheckCircle2, Layout, Github, Globe, MessageSquare } from "lucide-react";
 import api from "../../services/api";
 import { useNavigate } from "react-router-dom";
+import { ImagePickerModal } from "../ui/ImagePickerModal";
+import { ImageInput } from "../ui/ImageInput";
+import { useImagePicker } from "../../hooks/useImagePicker";
 
 interface CreateProjectModalProps {
     onClose: () => void;
@@ -11,6 +14,21 @@ export function CreateProjectModal({ onClose }: CreateProjectModalProps) {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+
+    // Image Pickers
+    const avatarPicker = useImagePicker({
+        onSuccess: (url) => {
+            setFormData(prev => ({ ...prev, avatarUrl: url }));
+        },
+        folderType: "project-images"
+    });
+
+    const bannerPicker = useImagePicker({
+        onSuccess: (url) => {
+            setFormData(prev => ({ ...prev, bannerUrl: url }));
+        },
+        folderType: "project-banners"
+    });
 
     // Estado do Formulário
     const [formData, setFormData] = useState({
@@ -136,36 +154,52 @@ export function CreateProjectModal({ onClose }: CreateProjectModalProps) {
                     <ImageIcon size={32} />
                 </div>
                 <h3 className="text-xl font-bold text-white">Identidade Visual</h3>
-                <p className="text-zinc-400 text-sm">Cole a URL das imagens para personalizar seu projeto.</p>
+                <p className="text-zinc-400 text-sm">Adicione imagens para personalizar seu projeto.</p>
             </div>
 
-            <div className="flex gap-4 items-start">
-                <div className="w-20 h-20 rounded-xl bg-zinc-800 shrink-0 overflow-hidden border border-zinc-700">
-                    {formData.avatarUrl ? <img src={formData.avatarUrl} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">Logo</div>}
-                </div>
-                <div className="flex-1">
-                    <label className="block text-xs font-bold text-zinc-400 uppercase mb-1">URL do Logo (Avatar)</label>
-                    <input 
-                        value={formData.avatarUrl} onChange={e => setFormData({...formData, avatarUrl: e.target.value})}
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white text-sm focus:border-violet-500"
-                        placeholder="https://..."
-                    />
-                </div>
-            </div>
-
-            <div className="space-y-2">
-                <div className="h-24 w-full rounded-xl bg-zinc-800 overflow-hidden border border-zinc-700 relative">
-                     {formData.bannerUrl ? <img src={formData.bannerUrl} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">Banner Preview</div>}
-                </div>
+            <div className="space-y-4">
+                {/* Logo/Avatar */}
                 <div>
-                    <label className="block text-xs font-bold text-zinc-400 uppercase mb-1">URL do Banner</label>
-                    <input 
-                        value={formData.bannerUrl} onChange={e => setFormData({...formData, bannerUrl: e.target.value})}
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white text-sm focus:border-violet-500"
-                        placeholder="https://..."
+                    <label className="block text-xs font-bold text-zinc-400 uppercase mb-2">Logo do Projeto</label>
+                    <ImageInput
+                        imageUrl={formData.avatarUrl}
+                        placeholder="Clique para adicionar logo"
+                        onClick={avatarPicker.openPicker}
+                        size="lg"
+                    />
+                </div>
+
+                {/* Banner */}
+                <div>
+                    <label className="block text-xs font-bold text-zinc-400 uppercase mb-2">Banner do Projeto</label>
+                    <ImageInput
+                        imageUrl={formData.bannerUrl}
+                        placeholder="Clique para adicionar banner"
+                        onClick={bannerPicker.openPicker}
+                        size="lg"
                     />
                 </div>
             </div>
+
+            {/* Image Picker Modals */}
+            <ImagePickerModal
+                isOpen={avatarPicker.isOpen}
+                onClose={avatarPicker.closePicker}
+                onImageSelect={avatarPicker.handleImageSelect}
+                title="Logo do Projeto"
+                description="Faça upload ou insira um link para o logo"
+                currentImage={formData.avatarUrl}
+                folderType="project-images"
+            />
+            <ImagePickerModal
+                isOpen={bannerPicker.isOpen}
+                onClose={bannerPicker.closePicker}
+                onImageSelect={bannerPicker.handleImageSelect}
+                title="Banner do Projeto"
+                description="Faça upload ou insira um link para o banner"
+                currentImage={formData.bannerUrl}
+                folderType="project-banners"
+            />
         </div>
     );
 

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { MessageCircle, ArrowBigUp, ArrowBigDown } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { CommentForm } from "./CommentForm"; 
-import api from "../../services/api";
+import api from "../../services/api"; 
 
 interface Comment {
   id: string;

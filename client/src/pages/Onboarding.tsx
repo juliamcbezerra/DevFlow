@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { userService } from "../services/userService";
+import { ImagePickerModal } from "../components/ui/ImagePickerModal";
+import { ImageInput } from "../components/ui/ImageInput";
+import { useImagePicker } from "../hooks/useImagePicker";
 import { 
     Camera, MapPin, Github, Linkedin, Globe, 
     ArrowRight, Check, Sparkles, Hash, Link as LinkIcon, X
@@ -28,6 +31,21 @@ export default function Onboarding() {
         portfolio: "",
         instagram: ""
     }
+  });
+
+  // Image Pickers
+  const avatarPicker = useImagePicker({
+    onSuccess: (url) => {
+      setFormData(prev => ({ ...prev, avatarUrl: url }));
+    },
+    folderType: "profile-pictures"
+  });
+
+  const bannerPicker = useImagePicker({
+    onSuccess: (url) => {
+      setFormData(prev => ({ ...prev, bannerUrl: url }));
+    },
+    folderType: "user-banners"
   });
 
   // Lista de tags sugeridas
@@ -126,28 +144,22 @@ export default function Onboarding() {
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-zinc-500 uppercase">Avatar URL</label>
-                                <div className="flex items-center gap-3 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800 focus-within:border-violet-500/50 transition-colors">
-                                    <Camera size={18} className="text-zinc-500"/>
-                                    <input 
-                                        value={formData.avatarUrl}
-                                        onChange={e => setFormData({...formData, avatarUrl: e.target.value})}
-                                        placeholder="https://..."
-                                        className="bg-transparent w-full text-sm text-zinc-200 focus:outline-none"
-                                    />
-                                </div>
+                                <label className="text-xs font-bold text-zinc-500 uppercase">Foto de Perfil</label>
+                                <ImageInput
+                                    imageUrl={formData.avatarUrl}
+                                    placeholder="Clique para adicionar"
+                                    onClick={avatarPicker.openPicker}
+                                    size="lg"
+                                />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-zinc-500 uppercase">Banner URL</label>
-                                <div className="flex items-center gap-3 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800 focus-within:border-violet-500/50 transition-colors">
-                                    <Sparkles size={18} className="text-zinc-500"/>
-                                    <input 
-                                        value={formData.bannerUrl}
-                                        onChange={e => setFormData({...formData, bannerUrl: e.target.value})}
-                                        placeholder="https://..."
-                                        className="bg-transparent w-full text-sm text-zinc-200 focus:outline-none"
-                                    />
-                                </div>
+                                <label className="text-xs font-bold text-zinc-500 uppercase">Banner</label>
+                                <ImageInput
+                                    imageUrl={formData.bannerUrl}
+                                    placeholder="Clique para adicionar"
+                                    onClick={bannerPicker.openPicker}
+                                    size="lg"
+                                />
                             </div>
                         </div>
 
@@ -174,6 +186,26 @@ export default function Onboarding() {
                             />
                         </div>
                     </div>
+
+                    {/* Image Picker Modals */}
+                    <ImagePickerModal
+                        isOpen={avatarPicker.isOpen}
+                        onClose={avatarPicker.closePicker}
+                        onImageSelect={avatarPicker.handleImageSelect}
+                        title="Foto de Perfil"
+                        description="Faça upload ou insira um link para sua foto de perfil"
+                        currentImage={formData.avatarUrl}
+                        folderType="profile-pictures"
+                    />
+                    <ImagePickerModal
+                        isOpen={bannerPicker.isOpen}
+                        onClose={bannerPicker.closePicker}
+                        onImageSelect={bannerPicker.handleImageSelect}
+                        title="Banner do Perfil"
+                        description="Faça upload ou insira um link para o banner do seu perfil"
+                        currentImage={formData.bannerUrl}
+                        folderType="user-banners"
+                    />
                 </div>
             )}
 
