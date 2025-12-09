@@ -5,12 +5,14 @@ import * as bcrypt from 'bcrypt';
 import { Response } from 'express';
 import { CreateUserDto, LoginSessionDto } from './dto/user.dto';
 import { access } from 'fs';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private mailService: MailService,
   ) {}
 
   // --- CADASTRO ---
@@ -51,6 +53,10 @@ export class AuthService {
         birthDate: new Date(dto.birthDate),
       },
     });
+
+    // Gera token de verificação (simples, pode ser JWT ou UUID)
+    const verifyToken = this.jwtService.sign({ email: dto.email });
+    await this.mailService.sendVerificationEmail(dto.email, verifyToken);
 
     return { message: 'Usuário criado com sucesso!' };
   }
@@ -132,10 +138,8 @@ async requestPasswordChange(userId: string) {
       }
     });
 
-    // --- MOCK DE ENVIO DE EMAIL ---
-    console.log(`\n📧 [EMAIL MOCK] Para: ${user.email}`);
-    console.log(`🔑 Seu código de verificação é: ${code}\n`);
-    // Aqui você integraria com SendGrid, AWS SES, Nodemailer, etc.
+    // Envia email de redefinição de senha
+    await this.mailService.sendPasswordResetEmail(user.email, code);
 
     return { message: 'Código de verificação enviado para seu e-mail.' };
   }

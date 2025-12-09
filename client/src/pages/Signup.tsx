@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { SignupForm, FormDataCadastro } from '../components/auth/signup-form/SignupForm';
+import { TermsModal } from '../components/modals/TermsModal';
 import api from '../services/api'; 
 import { useAuth } from '../context/AuthContext';
 import { motion, Variants } from 'framer-motion';
@@ -12,6 +13,8 @@ export default function SignupPage() {
   
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const [showTerms, setShowTerms] = useState(false);
 
   const handleSignup = async (dados: FormDataCadastro) => {
     try {
@@ -119,7 +122,14 @@ export default function SignupPage() {
           />
 
           <p className="text-center text-xs text-zinc-500 mt-6 leading-relaxed border-t border-white/5 pt-4">
-            Ao se registrar, você concorda com nossos Termos de Uso.
+            Ao se registrar, você concorda com nossos{' '} 
+            <button
+              type="button"
+              onClick={() => setShowTerms(true)}
+              className="text-violet-400 hover:text-violet-300 font-bold hover:underline"
+            >
+              Termos e Privacidade
+            </button>.
             <br />
             <span className="block mt-1 text-sm text-zinc-400">
                 Já possui uma conta? <Link to="/login" className="text-violet-400 hover:text-violet-300 font-bold hover:underline">Fazer Login</Link>
@@ -128,6 +138,10 @@ export default function SignupPage() {
 
         </div>
       </motion.div>
+
+      {showTerms && (
+        <TermsModal onClose={() => setShowTerms(false)} />
+      )}
 
     </div>
   );
