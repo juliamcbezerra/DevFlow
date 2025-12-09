@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom"; // Link Importado
 import { AppShell } from "../components/layout/AppShell";
 import { Sidebar } from "../components/layout/Sidebar";
 import { useAuth } from "../context/AuthContext";
@@ -212,11 +212,15 @@ export default function ChatPage() {
                         <header className="px-6 py-4 border-b border-zinc-800/50 flex items-center justify-between bg-zinc-900/90 backdrop-blur-xl z-10 shrink-0">
                             <div className="flex items-center gap-4">
                                 <button onClick={() => setActiveChat(null)} className="md:hidden text-zinc-400"><ChevronLeft size={24}/></button>
-                                <img src={activeChat.user.avatarUrl || `https://ui-avatars.com/api/?name=${activeChat.user.name}`} className="w-10 h-10 rounded-full object-cover ring-2 ring-zinc-800"/>
-                                <div>
-                                    <h3 className="font-bold text-white text-sm">{activeChat.user.name}</h3>
-                                    <span className="text-xs text-green-500 flex items-center gap-1">● Online</span>
-                                </div>
+                                
+                                {/* ✅ CORREÇÃO: LINK PARA O PERFIL */}
+                                <Link to={`/profile/${activeChat.user.username}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity group">
+                                    <img src={activeChat.user.avatarUrl || `https://ui-avatars.com/api/?name=${activeChat.user.name}`} className="w-10 h-10 rounded-full object-cover ring-2 ring-zinc-800 group-hover:ring-zinc-600 transition-all"/>
+                                    <div>
+                                        <h3 className="font-bold text-white text-sm group-hover:text-violet-400 transition-colors">{activeChat.user.name}</h3>
+                                        <span className="text-xs text-green-500 flex items-center gap-1">● Online</span>
+                                    </div>
+                                </Link>
                             </div>
                             <MoreVertical size={20} className="text-zinc-500"/>
                         </header>

@@ -48,6 +48,7 @@ export default function PostDetailsPage() {
       try {
           const { data } = await api.get(`/social/posts/${id}/comments`);
           setComments(data);
+          // Atualiza contador localmente
           setPost((prev: any) => ({ ...prev, _count: { ...prev._count, comments: prev._count.comments + 1 } }));
       } catch (error) { console.error(error); }
   };

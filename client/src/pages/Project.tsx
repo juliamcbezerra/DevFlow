@@ -29,13 +29,12 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(true);
   
   // Estados de Ação
-  const [joining, setJoining] = useState(false);
+  // const [joining, setJoining] = useState(false); // REMOVIDO: Não precisamos de loading no botão para UI Otimista
   const [inviting, setInviting] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
   
-  // Estados do Modal de Convite
   const [inviteUsername, setInviteUsername] = useState("");
   const [inviteRole, setInviteRole] = useState<'MEMBER' | 'ADMIN'>('MEMBER');
 
@@ -54,22 +53,36 @@ export default function ProjectPage() {
     loadData();
   }, [id]);
 
-  // --- Lógica de Entrar/Sair/Deletar ---
+  // --- LÓGICA OTIMISTA DE ENTRAR/SAIR ---
   const handleJoinLeave = async () => {
       if (!project) return;
-      setJoining(true);
+      
+      // 1. Guarda o estado anterior caso precise reverter
+      const previousProjectState = { ...project };
+      const wasMember = project.isMember;
+
+      // 2. Atualiza a UI IMEDIATAMENTE (Otimista)
+      setProject((prev: any) => ({
+          ...prev,
+          isMember: !wasMember,
+          _count: {
+              ...prev._count,
+              members: wasMember ? prev._count.members - 1 : prev._count.members + 1
+          }
+      }));
+
       try {
-          if (project.isMember) {
+          // 3. Faz a requisição em segundo plano
+          if (wasMember) {
               await projectService.leave(project.id);
-              setProject((prev: any) => prev ? ({ ...prev, isMember: false, _count: { ...prev._count, members: prev._count.members - 1 } }) : null);
           } else {
               await projectService.join(project.id);
-              setProject((prev: any) => prev ? ({ ...prev, isMember: true, _count: { ...prev._count, members: prev._count.members + 1 } }) : null);
           }
       } catch (err) {
-          console.error(err);
-      } finally {
-          setJoining(false);
+          console.error("Erro ao entrar/sair:", err);
+          // 4. Se der erro, REVERTE para o estado anterior
+          setProject(previousProjectState);
+          alert("Não foi possível realizar a ação. Tente novamente.");
       }
   };
 
@@ -77,7 +90,6 @@ export default function ProjectPage() {
       if (!project) return;
       if (!window.confirm("Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita.")) return;
       
-      setJoining(true);
       try {
           await projectService.delete(project.id);
           navigate('/feed');
@@ -85,7 +97,6 @@ export default function ProjectPage() {
           console.error("Erro ao deletar projeto:", err);
           const errorMsg = err.response?.data?.message || "Erro ao excluir projeto";
           alert(errorMsg);
-          setJoining(false);
       }
   };
 
@@ -152,7 +163,6 @@ export default function ProjectPage() {
 
   const canInvite = project.myRole === 'OWNER' || project.myRole === 'ADMIN';
 
-  // Variantes de Animação
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -217,7 +227,6 @@ export default function ProjectPage() {
                         </div>
 
                         <div className="flex items-center gap-2 mt-4 sm:mt-0">
-                            {/* BOTÃO EDITAR (SÓ PARA DONO) */}
                             {project.myRole === 'OWNER' && (
                                 <button 
                                     onClick={() => setShowEditModal(true)} 
@@ -235,22 +244,20 @@ export default function ProjectPage() {
                             {project.myRole === 'OWNER' ? (
                                 <button 
                                     onClick={handleDeleteProject} 
-                                    disabled={joining} 
                                     className={`px-6 py-2.5 rounded-xl font-bold text-xs transition-all shadow-lg flex items-center gap-2 bg-red-600/20 border border-red-500/50 text-red-400 hover:bg-red-600/30 hover:border-red-500 hover:text-red-300`}
                                 >
-                                    {joining ? <Loader2 className="animate-spin w-4 h-4"/> : <><Trash2 size={14}/> Excluir Projeto</>}
+                                    <Trash2 size={14}/> Excluir Projeto
                                 </button>
                             ) : (
                                 <button 
                                     onClick={handleJoinLeave} 
-                                    disabled={joining} 
                                     className={`px-6 py-2.5 rounded-xl font-bold text-xs transition-all shadow-lg flex items-center gap-2 ${
                                         project.isMember 
                                         ? 'bg-zinc-800 border border-zinc-700 text-zinc-300 hover:border-red-500/50 hover:text-red-400 hover:bg-zinc-900' 
                                         : 'bg-violet-600 hover:bg-violet-700 text-white hover:scale-105'
                                     }`}
                                 >
-                                    {joining ? <Loader2 className="animate-spin w-4 h-4"/> : (project.isMember ? <><LogOut size={14}/> Sair</> : <><UserPlus size={14}/> Participar</>)}
+                                    {project.isMember ? <><LogOut size={14}/> Sair</> : <><UserPlus size={14}/> Participar</>}
                                 </button>
                             )}
                         </div>
@@ -301,7 +308,6 @@ export default function ProjectPage() {
                 {posts.map((post) => (
                     <article key={post.id} className={postCardClass}>
                         <div className="flex h-full">
-                            {/* Coluna de Votos */}
                             <div className="w-12 bg-zinc-950/30 flex flex-col items-center py-3 border-r border-zinc-800/50 gap-1 shrink-0">
                                 <button onClick={(e) => votePost(e, post.id, 1)} className={`p-1 rounded transition-all active:scale-90 ${post.userVote === 1 ? 'text-orange-500 bg-orange-500/10' : 'text-zinc-500 hover:text-orange-500 hover:bg-zinc-800/50'}`}>
                                     <ArrowBigUp size={24} strokeWidth={2} className={post.userVote === 1 ? 'fill-orange-500/20' : ''} />
@@ -312,7 +318,6 @@ export default function ProjectPage() {
                                 </button>
                             </div>
                             
-                            {/* Conteúdo do Post */}
                             <div className="flex-1 p-4 cursor-pointer hover:bg-zinc-900/40 transition-colors" onClick={() => navigate(`/post/${post.id}`)}>
                                 <div className="flex items-start justify-between mb-2 text-xs text-zinc-500">
                                     <div className="flex items-center gap-2">
@@ -323,7 +328,6 @@ export default function ProjectPage() {
                                         <span>•</span>
                                         <span>{formatDate(post.createdAt)}</span>
                                     </div>
-                                    
                                     <PostOptions postId={post.id} authorId={post.author.id} onDeleteSuccess={handleDeletePost} />
                                 </div>
                                 
@@ -355,7 +359,7 @@ export default function ProjectPage() {
 
       </motion.div>
 
-      {/* MODAL DE CONVITE (Overlay com AnimatePresence poderia ser usado, mas mantive CSS puro para simplicidade) */}
+      {/* MODAL DE CONVITE */}
       {showInviteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
               <div className="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95">
