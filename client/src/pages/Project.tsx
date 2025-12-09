@@ -9,6 +9,7 @@ import { RichTextDisplay } from "../components/feed/RichTextDisplay";
 import { PostOptions } from "../components/feed/PostOptions"; 
 import { ProjectSidebar } from "../components/projects/ProjectSidebar"; 
 import { EditProjectModal } from "../components/projects/EditProjectModal";
+import { ProjectMembers } from "../components/projects/ProjectMembers";
 import api from "../services/api"; 
 import { 
     Loader2, MessageCircle, ArrowBigUp, ArrowBigDown, Settings, 
@@ -32,6 +33,7 @@ export default function ProjectPage() {
   const [inviting, setInviting] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
   
   // Estados do Modal de Convite
   const [inviteUsername, setInviteUsername] = useState("");
@@ -237,9 +239,12 @@ export default function ProjectPage() {
                     </p>
 
                     <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-zinc-500 border-t border-zinc-800/50 pt-4">
-                        <span className="flex items-center gap-1.5 text-zinc-300 bg-zinc-800/30 px-2 py-1 rounded-md border border-zinc-800/50">
+                        <button 
+                          onClick={() => setShowMembersModal(true)}
+                          className="flex items-center gap-1.5 text-zinc-300 bg-zinc-800/30 px-2 py-1 rounded-md border border-zinc-800/50 hover:bg-zinc-800/50 hover:text-violet-300 transition-colors cursor-pointer"
+                        >
                             <Users size={14} className="text-violet-400"/> {project._count?.members || 0} Membros
-                        </span>
+                        </button>
                         <span className="flex items-center gap-1.5 text-zinc-300 bg-zinc-800/30 px-2 py-1 rounded-md border border-zinc-800/50">
                             <Terminal size={14} className="text-emerald-400"/> {project._count?.posts || 0} Posts
                         </span>
@@ -375,6 +380,19 @@ export default function ProjectPage() {
             }}
         />
     )}
+    <ProjectMembers 
+        projectId={project?.id || ''}
+        projectOwnerId={project?.ownerId || ''}
+        isOpen={showMembersModal}
+        onClose={() => setShowMembersModal(false)}
+        onMemberRemoved={(memberId: string) => {
+            // Atualizar contador de membros
+            setProject((prev: any) => prev ? ({
+                ...prev,
+                _count: { ...prev._count, members: Math.max(0, prev._count.members - 1) }
+            }) : null);
+        }}
+    />
     </AppShell>
   );
 }

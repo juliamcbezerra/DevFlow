@@ -196,12 +196,19 @@ export function ProfileHeader({ profile, onFollowToggle }: ProfileHeaderProps) {
             type="followers" 
             isOpen={showFollowersModal} 
             onClose={() => setShowFollowersModal(false)}
+            onFollowersUpdate={(newCount) => {
+              // Atualizar o perfil com o novo count de seguidores
+              // Este callback é chamado quando remove alguém dos seguidores
+            }}
           />
           <FollowersModal 
             username={profile.username} 
             type="following" 
             isOpen={showFollowingModal} 
             onClose={() => setShowFollowingModal(false)}
+            onFollowersUpdate={(newCount) => {
+              // Atualizar o perfil com o novo count de seguindo (em "following" este é na verdade um "unfollow")
+            }}
           />
         </div>
       </div>

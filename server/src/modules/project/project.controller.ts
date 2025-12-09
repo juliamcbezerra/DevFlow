@@ -51,6 +51,16 @@ export class ProjectController {
     return this.projectService.leaveProject(id, req.user.id);
   }
 
+  @Get(':id/members')
+  getMembers(@Param('id') id: string) {
+    return this.projectService.getMembers(id);
+  }
+
+  @Delete(':id/members/:memberId')
+  removeMember(@Param('id') id: string, @Param('memberId') memberId: string, @Req() req: any) {
+    return this.projectService.removeMember(id, req.user.id, memberId);
+  }
+
   @Delete(':id')
   delete(@Param('id') id: string, @Req() req: any) {
     return this.projectService.deleteProject(id, req.user.id);

@@ -219,5 +219,63 @@ async update(id: string, userId: string, dto: UpdateProjectDto) {
       ...dto,
     },
   });
- }
+  }
+
+  // --- MEMBROS ---
+  async getMembers(projectIdOrSlug: string) {
+    const project = await this.prisma.project.findFirst({
+      where: { OR: [{ id: projectIdOrSlug }, { slug: projectIdOrSlug }] },
+      select: { id: true }
+    });
+
+    if (!project) throw new NotFoundException('Projeto não encontrado');
+
+    const members = await this.prisma.member.findMany({
+      where: { projectId: project.id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            avatarUrl: true
+          }
+        }
+      },
+      orderBy: [{ role: 'asc' }]
+    });
+
+    return members.map(m => ({
+      id: m.user.id,
+      name: m.user.name,
+      username: m.user.username,
+      avatarUrl: m.user.avatarUrl,
+      role: m.role
+    }));
+  }
+
+  async removeMember(projectIdOrSlug: string, requestUserId: string, memberId: string) {
+    const project = await this.prisma.project.findFirst({
+      where: { OR: [{ id: projectIdOrSlug }, { slug: projectIdOrSlug }] },
+      select: { id: true, ownerId: true }
+    });
+
+    if (!project) throw new NotFoundException('Projeto não encontrado');
+    if (project.ownerId !== requestUserId) {
+      throw new ForbiddenException('Apenas o dono pode remover membros');
+    }
+
+    const member = await this.prisma.member.findUnique({
+      where: { userId_projectId: { userId: memberId, projectId: project.id } }
+    });
+
+    if (!member) throw new NotFoundException('Membro não encontrado neste projeto');
+    if (member.role === 'OWNER') throw new ConflictException('Não é possível remover o dono do projeto');
+
+    await this.prisma.member.delete({
+      where: { userId_projectId: { userId: memberId, projectId: project.id } }
+    });
+
+    return { message: 'Membro removido com sucesso' };
+  }
 }
