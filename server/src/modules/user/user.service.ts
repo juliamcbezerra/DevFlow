@@ -99,9 +99,10 @@ export class UserService {
     if (!user) throw new NotFoundException('Usuário não encontrado');
 
     const isFollowing = currentUserId && Array.isArray(user.followedBy) ? user.followedBy.length > 0 : false;
+    const isMe = currentUserId === user.id;
     const { followedBy, ...rest } = user;
 
-    return { ...rest, isFollowing };
+    return { ...rest, isFollowing, isMe };
   }
 
   // 5. Seguir / Deixar de Seguir (Com Notificação)
