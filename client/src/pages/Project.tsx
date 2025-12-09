@@ -11,12 +11,12 @@ import { ProjectSidebar } from "../components/projects/ProjectSidebar";
 import { EditProjectModal } from "../components/projects/EditProjectModal";
 import { ProjectMembers } from "../components/projects/ProjectMembers";
 import api from "../services/api"; 
+import { motion, Variants } from "framer-motion";
 import { 
     Loader2, MessageCircle, ArrowBigUp, ArrowBigDown, Settings, 
-    Share2, Users, ShieldCheck, Terminal, LogOut, UserPlus, X, Crown, Trash2
+    Share2, Users, ShieldCheck, Terminal, LogOut, UserPlus, X, Trash2
 } from "lucide-react";
 
-// Estilo do Card Rico (Recuperado da versão antiga)
 const postCardClass = "bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl overflow-hidden hover:border-zinc-700/80 transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-violet-900/5";
 
 export default function ProjectPage() {
@@ -89,7 +89,6 @@ export default function ProjectPage() {
       }
   };
 
-  // --- Lógica de Convidar ---
   const handleInvite = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!project) return;
@@ -103,7 +102,6 @@ export default function ProjectPage() {
       finally { setInviting(false); }
   };
 
-  // --- Lógica de Posts (Criar, Deletar, Votar) ---
   const handleNewPost = (newPost: any) => { 
       setPosts([newPost, ...posts]); 
       setProject((prev: any) => prev ? { ...prev, _count: { ...prev._count, posts: prev._count.posts + 1 } } : null);
@@ -154,20 +152,39 @@ export default function ProjectPage() {
 
   const canInvite = project.myRole === 'OWNER' || project.myRole === 'ADMIN';
 
+  // Variantes de Animação
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: { 
+        opacity: 1,
+        transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+  };
+
   return (
     <AppShell>
       <Sidebar />
 
-      <div className="flex-1 flex min-w-0 pb-20 px-6 max-w-7xl mx-auto w-full gap-6">
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="flex-1 flex min-w-0 pb-20 px-6 max-w-7xl mx-auto w-full gap-6"
+      >
         
         {/* === ÁREA CENTRAL === */}
         <div className="flex-1 min-w-0 space-y-6">
             
             {/* HEADER RICO */}
-            <div className="relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/50 backdrop-blur-xl shadow-lg">
-                <div className={`h-32 w-full bg-linear-to-r from-violet-900/40 to-blue-900/40 relative overflow-hidden`}>
+            <motion.div variants={itemVariants} className="relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/50 backdrop-blur-xl shadow-lg">
+                <div className={`h-32 w-full bg-linear-to-r from-violet-900/40 to-blue-900/40 relative overflow-hidden group`}>
                     {project.bannerUrl ? (
-                        <img src={project.bannerUrl} className="w-full h-full object-cover" alt="Banner"/>
+                        <img src={project.bannerUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Banner"/>
                     ) : (
                         <div className="w-full h-full bg-linear-to-r from-violet-900/40 to-blue-900/40">
                             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light"></div>
@@ -178,9 +195,14 @@ export default function ProjectPage() {
                 <div className="px-6 pb-6">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end -mt-10 mb-4 gap-4">
                         <div className="flex items-end gap-4">
-                            <div className="w-24 h-24 rounded-2xl bg-zinc-950 border-4 border-zinc-950 flex items-center justify-center text-4xl shadow-xl overflow-hidden relative shrink-0">
+                            <motion.div 
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ delay: 0.2, type: "spring" }}
+                                className="w-24 h-24 rounded-2xl bg-zinc-950 border-4 border-zinc-950 flex items-center justify-center text-4xl shadow-xl overflow-hidden relative shrink-0"
+                            >
                                 {project.avatarUrl ? <img src={project.avatarUrl} className="w-full h-full object-cover"/> : <span className="font-bold text-white">{project.name[0]}</span>}
-                            </div>
+                            </motion.div>
                             <div className="mb-1 min-w-0">
                                 <h1 className="text-3xl font-bold text-white flex items-center gap-2 truncate">
                                     {project.name}
@@ -260,20 +282,22 @@ export default function ProjectPage() {
                         )}
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Widget de Post */}
-            {project.isMember ? (
-                <CreatePostWidget projectId={project.id} onPostCreated={handleNewPost} />
-            ) : (
-                <div className="bg-zinc-900/20 border border-dashed border-zinc-800 rounded-2xl p-8 text-center animate-in fade-in duration-700">
-                    <p className="text-zinc-400 font-bold mb-1 flex items-center justify-center gap-2"><ShieldCheck size={18}/> Modo Visitante</p>
-                    <p className="text-xs text-zinc-500">Entre na comunidade para postar, interagir e ver canais exclusivos.</p>
-                </div>
-            )}
+            <motion.div variants={itemVariants}>
+                {project.isMember ? (
+                    <CreatePostWidget projectId={project.id} onPostCreated={handleNewPost} />
+                ) : (
+                    <div className="bg-zinc-900/20 border border-dashed border-zinc-800 rounded-2xl p-8 text-center animate-in fade-in duration-700">
+                        <p className="text-zinc-400 font-bold mb-1 flex items-center justify-center gap-2"><ShieldCheck size={18}/> Modo Visitante</p>
+                        <p className="text-xs text-zinc-500">Entre na comunidade para postar, interagir e ver canais exclusivos.</p>
+                    </div>
+                )}
+            </motion.div>
             
-            {/* LISTA DE POSTS (Completa e Rica) */}
-            <div className="space-y-4">
+            {/* LISTA DE POSTS */}
+            <motion.div variants={itemVariants} className="space-y-4">
                 {posts.map((post) => (
                     <article key={post.id} className={postCardClass}>
                         <div className="flex h-full">
@@ -300,7 +324,6 @@ export default function ProjectPage() {
                                         <span>{formatDate(post.createdAt)}</span>
                                     </div>
                                     
-                                    {/* ✅ PostOptions Recuperado */}
                                     <PostOptions postId={post.id} authorId={post.author.id} onDeleteSuccess={handleDeletePost} />
                                 </div>
                                 
@@ -320,17 +343,19 @@ export default function ProjectPage() {
                 {posts.length === 0 && (
                     <div className="text-center py-10 text-zinc-600 text-sm">Nenhum post encontrado.</div>
                 )}
-            </div>
+            </motion.div>
         </div>
 
         {/* === SIDEBAR DIREITA === */}
         {project.groupedMembers && (
-            <ProjectSidebar groupedMembers={project.groupedMembers} />
+            <motion.div variants={itemVariants}>
+                <ProjectSidebar groupedMembers={project.groupedMembers} />
+            </motion.div>
         )}
 
-      </div>
+      </motion.div>
 
-      {/* MODAL DE CONVITE */}
+      {/* MODAL DE CONVITE (Overlay com AnimatePresence poderia ser usado, mas mantive CSS puro para simplicidade) */}
       {showInviteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
               <div className="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95">
@@ -371,6 +396,8 @@ export default function ProjectPage() {
               </div>
           </div>
       )}
+
+    {/* MODAL DE EDIÇÃO */}
     {showEditModal && (
         <EditProjectModal 
             project={project} 
@@ -380,13 +407,14 @@ export default function ProjectPage() {
             }}
         />
     )}
+
+    {/* MODAL DE MEMBROS */}
     <ProjectMembers 
         projectId={project?.id || ''}
         projectOwnerId={project?.ownerId || ''}
         isOpen={showMembersModal}
         onClose={() => setShowMembersModal(false)}
         onMemberRemoved={(memberId: string) => {
-            // Atualizar contador de membros
             setProject((prev: any) => prev ? ({
                 ...prev,
                 _count: { ...prev._count, members: Math.max(0, prev._count.members - 1) }

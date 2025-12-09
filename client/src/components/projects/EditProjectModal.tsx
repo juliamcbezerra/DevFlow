@@ -4,6 +4,7 @@ import { projectService } from "../../services/projectService";
 import { ImagePickerModal } from "../ui/ImagePickerModal";
 import { ImageInput } from "../ui/ImageInput";
 import { useImagePicker } from "../../hooks/useImagePicker";
+import { motion, Variants } from "framer-motion";
 
 interface EditProjectModalProps {
   project: any;
@@ -79,9 +80,25 @@ export function EditProjectModal({ project, onClose, onUpdateSuccess }: EditProj
     }
   };
 
+  // Variantes de Animação
+  const modalVariant: Variants = {
+    hidden: { opacity: 0, scale: 0.95 },
+    visible: { 
+        opacity: 1, scale: 1,
+        transition: { duration: 0.2, ease: "easeOut" }
+    },
+    exit: { opacity: 0, scale: 0.95, transition: { duration: 0.15 } }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-zinc-900 border border-zinc-800 w-full max-w-2xl rounded-2xl shadow-2xl animate-in zoom-in-95 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <motion.div 
+        variants={modalVariant}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        className="bg-zinc-900 border border-zinc-800 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
+      >
         
         {/* HEADER */}
         <div className="flex justify-between items-center p-6 border-b border-zinc-800 shrink-0">
@@ -89,7 +106,7 @@ export function EditProjectModal({ project, onClose, onUpdateSuccess }: EditProj
             <h2 className="text-xl font-bold text-white">Editar Projeto</h2>
             <p className="text-sm text-zinc-400">Atualize as informações visuais e dados.</p>
           </div>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors p-1 hover:bg-zinc-800 rounded">
             <X size={24} />
           </button>
         </div>
@@ -120,25 +137,29 @@ export function EditProjectModal({ project, onClose, onUpdateSuccess }: EditProj
                 </div>
             </div>
 
-            {/* Image Picker Modals */}
-            <ImagePickerModal
-                isOpen={logoPicker.isOpen}
-                onClose={logoPicker.closePicker}
-                onImageSelect={logoPicker.handleImageSelect}
-                title="Logo do Projeto"
-                description="Faça upload ou insira um link para o logo"
-                currentImage={avatarUrl}
-                folderType="project-images"
-            />
-            <ImagePickerModal
-                isOpen={bannerPicker.isOpen}
-                onClose={bannerPicker.closePicker}
-                onImageSelect={bannerPicker.handleImageSelect}
-                title="Banner do Projeto"
-                description="Faça upload ou insira um link para o banner"
-                currentImage={bannerUrl}
-                folderType="project-banners"
-            />
+            {/* Image Picker Modals (Renderizados apenas se abertos) */}
+            {logoPicker.isOpen && (
+                <ImagePickerModal
+                    isOpen={logoPicker.isOpen}
+                    onClose={logoPicker.closePicker}
+                    onImageSelect={logoPicker.handleImageSelect}
+                    title="Logo do Projeto"
+                    description="Faça upload ou insira um link para o logo"
+                    currentImage={avatarUrl}
+                    folderType="project-images"
+                />
+            )}
+            {bannerPicker.isOpen && (
+                <ImagePickerModal
+                    isOpen={bannerPicker.isOpen}
+                    onClose={bannerPicker.closePicker}
+                    onImageSelect={bannerPicker.handleImageSelect}
+                    title="Banner do Projeto"
+                    description="Faça upload ou insira um link para o banner"
+                    currentImage={bannerUrl}
+                    folderType="project-banners"
+                />
+            )}
 
             {/* Nome */}
             <div className="space-y-2">
@@ -176,7 +197,7 @@ export function EditProjectModal({ project, onClose, onUpdateSuccess }: EditProj
                         onChange={(e) => setCustomTag(e.target.value)}
                         onKeyDown={handleCustomTagKeyDown}
                         placeholder="Adicionar..." 
-                        className="bg-transparent text-sm text-white focus:outline-none min-w-20"
+                        className="bg-transparent text-sm text-white focus:outline-none min-w-20 placeholder:text-zinc-600"
                     />
                 </div>
                 {/* Sugestões */}
@@ -200,7 +221,7 @@ export function EditProjectModal({ project, onClose, onUpdateSuccess }: EditProj
           </button>
         </div>
 
-      </div>
+      </motion.div>
     </div>
   );
 }
