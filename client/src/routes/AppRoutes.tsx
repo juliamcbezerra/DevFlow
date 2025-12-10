@@ -4,11 +4,10 @@ import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import LoginPage from '../pages/Login';
 import SignupPage from '../pages/Signup';
 import VerificationSentPage from '../pages/VerificationSentPage'; 
-import VerifyEmailPage from '../pages/VerifyEmailPage'; // <--- Nova Rota: Confirmação de Token
-import ResetPasswordPage from '../pages/ResetPasswordPage'; // <--- Nova Rota: Redefinir Senha
+import VerifyEmailPage from '../pages/VerifyEmailPage'; 
+import ResetPasswordPage from '../pages/ResetPasswordPage'; 
 
 // Pages - App
-import Onboarding from '../pages/Onboarding';
 import FeedPage from '../pages/Feed';
 import ProfilePage from '../pages/ProfilePage';
 import SettingsPage from '../pages/Settings';
@@ -22,6 +21,7 @@ import CommunityPage from '../pages/Community';
 // Components
 import { Navbar } from '../components/layout/Navbar';
 import { PrivateRoute } from './PrivateRoute';
+import { OnboardingGuard } from './OnboardingGuard'; // 💥 NOVO IMPORT
 
 // Layout para páginas que têm Navbar
 const PrivateLayout = () => (
@@ -49,8 +49,8 @@ export function AppRoutes() {
       {/* --- ROTAS PRIVADAS (Requer Login) --- */}
       <Route element={<PrivateRoute />}>
         
-        {/* Onboarding (Sem Navbar) */}
-        <Route path="/onboarding" element={<Onboarding />} />
+        {/* 💥 Onboarding (Usando o Guard) */}
+        <Route path="/onboarding" element={<OnboardingGuard />} />
 
         {/* Rotas com Navbar (Layout) */}
         <Route element={<PrivateLayout />}>
@@ -81,7 +81,7 @@ export function AppRoutes() {
 
       </Route>
 
-      {/* Rota de Catch-all / 404 (Redireciona para o login se nada mais bater) */}
+      {/* Rota de Catch-all / 404 */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

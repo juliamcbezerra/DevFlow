@@ -1,13 +1,17 @@
 FROM node:20-alpine
 
-# Muda para esse diretório
 WORKDIR /usr/src/app
 
-# Copia as dependências
-COPY package*.json .
+# COPIAR para ./ (diretório atual de trabalho) explicitamente
+COPY package*.json ./
 
-# Instala as dependências
 RUN npm install
 
-# Roda o projeto
-CMD [ "npm", "run", "dev" ]
+# Copia o resto dos arquivos
+COPY . .
+
+# Expõe a porta do Vite
+EXPOSE 5173
+
+# O host é necessário para o Docker mapear a porta corretamente
+CMD [ "npm", "run", "dev", "--", "--host" ]

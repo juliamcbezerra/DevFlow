@@ -1,5 +1,6 @@
 import { X, AlertTriangle } from "lucide-react";
 import { useEffect } from "react";
+import React from 'react'; // Importar React é necessário para tipar React.ReactNode
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -11,6 +12,9 @@ interface ConfirmModalProps {
   cancelText?: string;
   isDestructive?: boolean; // Se true, o botão fica vermelho
   isLoading?: boolean;
+  
+  // 💡 ADIÇÃO: Nova propriedade para conteúdo customizado
+  customContent?: React.ReactNode; 
 }
 
 export function ConfirmModal({
@@ -22,7 +26,9 @@ export function ConfirmModal({
   confirmText = "Confirmar",
   cancelText = "Cancelar",
   isDestructive = false,
-  isLoading = false
+  isLoading = false,
+  // 💡 ADIÇÃO: Desestruturar a nova propriedade
+  customContent = null, 
 }: ConfirmModalProps) {
   
   // Fechar ao apertar ESC
@@ -70,6 +76,13 @@ export function ConfirmModal({
           <p className="text-sm text-zinc-400 leading-relaxed mb-6">
             {description}
           </p>
+
+          {/* 💡 ADIÇÃO: Renderizar Conteúdo Customizado (se existir) */}
+          {customContent && (
+            <div className="w-full mb-6 border-t border-zinc-800 pt-6">
+                {customContent}
+            </div>
+          )}
 
           {/* Botões de Ação */}
           <div className="flex gap-3 w-full sm:justify-end">

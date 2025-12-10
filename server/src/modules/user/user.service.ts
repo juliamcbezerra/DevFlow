@@ -20,16 +20,17 @@ export class UserService {
     });
   }
 
-  // 2. Atualizar Perfil
+  // 2. Atualizar Perfil (Geral)
   async updateProfile(userId: string, dto: UpdateProfileDto) {
+    // Certifique-se de que a rota PATCH /users/me não altere o onboardingCompleted
     return this.prisma.user.update({
       where: { id: userId },
       data: {
         name: dto.name,
         bio: dto.bio,
         avatarUrl: dto.avatarUrl,
-        bannerUrl: dto.bannerUrl,     
-        location: dto.location,      
+        bannerUrl: dto.bannerUrl, 
+        location: dto.location, 
         socialLinks: dto.socialLinks || undefined, 
         interestTags: dto.interestTags
       },
@@ -37,12 +38,44 @@ export class UserService {
         id: true, name: true, username: true, 
         avatarUrl: true, bannerUrl: true, 
         bio: true, location: true, socialLinks: true, 
-        interestTags: true
+        interestTags: true,
+        onboardingCompleted: true, // Incluído para consistência com o retorno do finishOnboarding
       }
     });
   }
 
-  // 3. Listar Comunidade
+  // 💥 3. Finalizar Onboarding (NOVO MÉTODO)
+  // Esta rota é chamada pelo Front-end em PATCH /users/me/onboarding
+  async finishOnboarding(userId: string, dto: UpdateProfileDto) {
+    
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: dto.name, // O nome pode ser preenchido/alterado no onboarding
+        bio: dto.bio,
+        avatarUrl: dto.avatarUrl,
+        bannerUrl: dto.bannerUrl, 
+        location: dto.location, 
+        socialLinks: dto.socialLinks || undefined, 
+        interestTags: dto.interestTags,
+        
+        // 💥 CRUCIAL: Marca a conclusão
+        onboardingCompleted: true, 
+      },
+      select: {
+        id: true, name: true, username: true, 
+        avatarUrl: true, bannerUrl: true, 
+        bio: true, location: true, socialLinks: true, 
+        interestTags: true,
+        onboardingCompleted: true, // Retorna a flag TRUE
+      }
+    });
+    
+    return updatedUser;
+  }
+
+
+  // 4. Listar Comunidade (Numeração ajustada)
   async findAllCommunity(userId: string, type: 'foryou' | 'following') {
     if (type === 'following') {
       return this.prisma.user.findMany({
@@ -81,12 +114,12 @@ export class UserService {
     return scoredUsers.filter(u => u.score > 0 || scoredUsers.length < 20).sort((a, b) => b.score - a.score);
   }
 
-  // 4. Buscar Perfil
+  // 5. Buscar Perfil (Numeração ajustada)
   async findByUsername(username: string, currentUserId?: string) {
     const user = await this.prisma.user.findUnique({
       where: { username },
       select: {
-        id: true, name: true, username: true, avatarUrl: true, bio: true, interestTags: true, createdAt: true, bannerUrl: true, location: true, socialLinks: true,
+        id: true, name: true, username: true, avatarUrl: true, bio: true, interestTags: true, createdAt: true, bannerUrl: true, location: true, socialLinks: true, onboardingCompleted: true, // 💡 Incluído aqui também
         _count: { select: { followedBy: true, following: true, posts: true, projectsOwned: true } },
         followedBy: currentUserId ? { where: { followerId: currentUserId } } : false,
         posts: {
@@ -98,6 +131,7 @@ export class UserService {
 
     if (!user) throw new NotFoundException('Usuário não encontrado');
 
+    // Acessa o campo `onboardingCompleted` para retorno
     const isFollowing = currentUserId && Array.isArray(user.followedBy) ? user.followedBy.length > 0 : false;
     const isMe = currentUserId === user.id;
     const { followedBy, ...rest } = user;
@@ -105,7 +139,7 @@ export class UserService {
     return { ...rest, isFollowing, isMe };
   }
 
-  // 5. Seguir / Deixar de Seguir (Com Notificação)
+  // 6. Seguir / Deixar de Seguir (Com Notificação) (Numeração ajustada)
   async toggleFollow(followerId: string, targetUsername: string) {
     const targetUser = await this.prisma.user.findUnique({ where: { username: targetUsername } });
     if (!targetUser) throw new NotFoundException('Usuário não encontrado');
@@ -139,7 +173,7 @@ export class UserService {
     }
   }
 
-  // 6. Buscar Seguidores
+  // 7. Buscar Seguidores (Numeração ajustada)
   async getFollowers(username: string) {
     const user = await this.prisma.user.findUnique({
       where: { username },
@@ -169,7 +203,7 @@ export class UserService {
     return followers.map(f => f.follower);
   }
 
-  // 7. Buscar Seguindo
+  // 8. Buscar Seguindo (Numeração ajustada)
   async getFollowing(username: string) {
     const user = await this.prisma.user.findUnique({
       where: { username },

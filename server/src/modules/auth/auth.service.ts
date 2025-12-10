@@ -12,7 +12,7 @@ import * as bcrypt from 'bcrypt';
 import { Response } from 'express';
 import { CreateUserDto, LoginSessionDto } from './dto/user.dto';
 import { MailService } from '../mail/mail.service';
-import { v4 as uuidv4 } from 'uuid'; // Certifique-se de ter: npm i uuid && npm i -D @types/uuid
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AuthService {
@@ -51,7 +51,7 @@ export class AuthService {
     // 4. Gera Token de Verificação
     const verificationToken = uuidv4();
 
-    // 5. Criar usuário (Não verificado inicialmente)
+    // 5. Criar usuário (Não verificado e onboarding em false inicialmente)
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
@@ -59,8 +59,9 @@ export class AuthService {
         password: hashedPassword,
         username: finalUsername, 
         birthDate: new Date(dto.birthDate),
-        isVerified: false, // <--- Importante
-        verificationToken: verificationToken, // <--- Salva o token
+        isVerified: false, 
+        verificationToken: verificationToken,
+        onboardingCompleted: false, // Inicia como false
         avatarUrl: `https://ui-avatars.com/api/?name=${dto.name}&background=random`,
       },
     });
@@ -70,8 +71,6 @@ export class AuthService {
       await this.mailService.sendVerificationEmail(dto.email, verificationToken);
     } catch (error) {
       console.error("⚠️ Erro ao enviar email de verificação:", error);
-      // Não lançamos erro aqui para permitir que o usuário seja criado.
-      // Ele poderá pedir reenvio depois se necessário.
     }
 
     return { message: 'Cadastro realizado. Verifique seu e-mail!' };
@@ -87,6 +86,17 @@ export class AuthService {
           { username: dto.login },
         ],
       },
+      // 💥 BUSCA COMPLETA: Incluindo onboardingCompleted para o Front-end
+      select: {
+          id: true,
+          email: true,
+          name: true,
+          username: true,
+          password: true, 
+          avatarUrl: true,
+          isVerified: true,
+          onboardingCompleted: true, // <--- CRÍTICO: CAMPO ADICIONADO AQUI
+      }
     });
 
     if (!user) throw new UnauthorizedException('Credenciais inválidas');
@@ -128,6 +138,7 @@ export class AuthService {
       expires: expiresAt,
     });
 
+    // 7. Retornar Usuário e Token para o Front-end
     return {
       access_token: token,
       user: {
@@ -136,11 +147,13 @@ export class AuthService {
         email: user.email,
         username: user.username,
         avatarUrl: user.avatarUrl,
+        // 💥 CRÍTICO: INCLUIR ESTE CAMPO AQUI para o AuthContext
+        onboardingCompleted: user.onboardingCompleted, 
       },
     };
   }
 
-  // --- VERIFICAR EMAIL (NOVO) ---
+  // --- VERIFICAR EMAIL ---
   async verifyEmail(token: string) {
     const user = await this.prisma.user.findFirst({
         where: { verificationToken: token }
@@ -149,11 +162,11 @@ export class AuthService {
     if (!user) throw new NotFoundException('Token de verificação inválido ou expirado.');
 
     await this.prisma.user.update({
-        where: { id: user.id },
-        data: { 
-            isVerified: true, 
-            verificationToken: null // Limpa o token após uso
-        }
+      where: { id: user.id },
+      data: { 
+          isVerified: true, 
+          verificationToken: null
+      }
     });
 
     return { message: 'E-mail verificado com sucesso! Você já pode fazer login.' };
@@ -161,18 +174,14 @@ export class AuthService {
 
   // --- RECUPERAÇÃO DE SENHA (Solicitar Código) ---
   async requestPasswordChange(email: string) {
-    // Busca pelo email que vem no body (provavelmente { email: "..." })
     const user = await this.prisma.user.findUnique({ where: { email } });
     
-    // Por segurança, não avisamos se o email não existe (evita enumeração de usuários)
     if (!user) return { message: 'Se o e-mail existir, um código foi enviado.' };
 
-    // Gera código de 6 dígitos
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = new Date();
-    expires.setMinutes(expires.getMinutes() + 15); // Validade de 15 min
+    expires.setMinutes(expires.getMinutes() + 15);
 
-    // Salva no banco
     await this.prisma.user.update({
       where: { id: user.id },
       data: { 
@@ -181,19 +190,17 @@ export class AuthService {
       }
     });
 
-    // Envia email com o CÓDIGO
     try {
         await this.mailService.sendPasswordResetCode(user.email, code);
     } catch (error) {
-        console.error("Erro ao enviar código:", error);
-        throw new BadRequestException("Erro ao enviar e-mail. Tente novamente.");
+      console.error("Erro ao enviar código:", error);
+      throw new BadRequestException("Erro ao enviar e-mail. Tente novamente.");
     }
 
     return { message: 'Código de verificação enviado para seu e-mail.' };
   }
 
   // --- RECUPERAÇÃO DE SENHA (Confirmar Troca) ---
-  // dto deve conter: { email, code, newPassword }
   async confirmPasswordChange(dto: any) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
     

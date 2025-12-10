@@ -28,8 +28,10 @@ services:
       - ./client/.env
     volumes:
       - ./client:/usr/src/app
+      # REMOVIDA A LINHA DO NODE_MODULES AQUI PARA EVITAR CONFLITOS
       - /usr/src/app/node_modules
-    command: npm run dev
+    # Adicionado --host para garantir acesso externo
+    command: npm run dev -- --host
 
   db:
     container_name: devflow_db

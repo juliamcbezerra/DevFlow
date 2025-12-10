@@ -28,7 +28,7 @@ export default function LoginPage() {
 
       if (user) {
           // Lógica de Redirecionamento Pós-Login
-          if (!user.hasCompletedOnboarding) { 
+          if (!user.onboardingCompleted) { 
               navigate('/onboarding');
           } else {
               navigate('/feed');

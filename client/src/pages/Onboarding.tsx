@@ -6,7 +6,7 @@ import { ImagePickerModal } from "../components/ui/ImagePickerModal";
 import { ImageInput } from "../components/ui/ImageInput";
 import { useImagePicker } from "../hooks/useImagePicker";
 import { 
-    Camera, MapPin, Github, Linkedin, Globe, 
+    MapPin, Github, Linkedin, Globe, 
     ArrowRight, Check, Sparkles, Hash, Link as LinkIcon, X
 } from "lucide-react";
 
@@ -62,23 +62,30 @@ export default function Onboarding() {
     }
   };
 
+  // 💥 FUNÇÃO DE SUBMIT ATUALIZADA PARA USAR O NOVO ENDPOINT
   const handleSubmit = async () => {
       setLoading(true);
       try {
-          const updatedUser = await userService.updateProfile({
-              bio: formData.bio,
-              location: formData.location,
-              avatarUrl: formData.avatarUrl,
-              bannerUrl: formData.bannerUrl,
-              interestTags: formData.interestTags,
-              socialLinks: formData.socialLinks
-          });
-          
-          updateUser(updatedUser); // Atualiza navbar imediatamente
-          navigate('/feed');
+        const profileData = {
+            bio: formData.bio,
+            location: formData.location,
+            avatarUrl: formData.avatarUrl,
+            bannerUrl: formData.bannerUrl,
+            interestTags: formData.interestTags,
+            socialLinks: formData.socialLinks
+        };
+
+        // 💡 Chama o novo método que usará a rota /users/me/onboarding
+        const finishedUser = await userService.finishOnboarding(profileData);
+        
+        // 2. Atualiza o Contexto de Autenticação com o objeto que contêm onboardingCompleted: true
+        updateUser(finishedUser); 
+        
+        // 3. Navega para o feed (o PrivateRoute/OnboardingGuard não deve mais bloquear)
+        navigate('/feed');
+
       } catch (error) {
-          console.error(error);
-          alert("Erro ao salvar perfil.");
+          console.error("Erro ao finalizar o onboarding:", error);
       } finally {
           setLoading(false);
       }
@@ -209,7 +216,7 @@ export default function Onboarding() {
                 </div>
             )}
 
-            {/* --- PASSO 2: INTERESSES (CORRIGIDO) --- */}
+            {/* --- PASSO 2: INTERESSES --- */}
             {step === 2 && (
                 <div className="animate-in fade-in slide-in-from-right-4 duration-300">
                     <h2 className="text-2xl font-bold text-white mb-2">O que você curte?</h2>
