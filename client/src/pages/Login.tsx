@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-// Certifique-se de que a importação do LoginForm está correta
-import { LoginForm, FormDataLogin } from '../components/auth/login-form/LoginForm'; 
+import { LoginForm, FormDataLogin } from '../components/auth/login-form/LoginForm';
 import { ForgotPasswordModal } from '../components/modals/ForgotPasswordModal';
 import { motion, Variants } from 'framer-motion';
 import { Code2, GitCommit, Cpu } from 'lucide-react';
 
 export default function LoginPage() {
-  const { signIn } = useAuth();
+  const { signIn } = useAuth(); 
   const navigate = useNavigate();
   
   const [error, setError] = useState('');
@@ -19,23 +18,36 @@ export default function LoginPage() {
     try {
       setError('');
       setLoading(true);
-      await signIn({ 
+      
+      // Recebe o objeto do usuário com a flag hasCompletedOnboarding
+      const user = await signIn({ 
         login: dados.login, 
         password: dados.password,
         rememberMe: dados.rememberMe,
       });
-      navigate('/feed');
+
+      if (user) {
+          // Lógica de Redirecionamento Pós-Login
+          if (!user.hasCompletedOnboarding) { 
+              navigate('/onboarding');
+          } else {
+              navigate('/feed');
+          }
+      } else {
+          // Caso raro onde o signIn não lançou erro mas também não retornou usuário
+          setError('Login falhou. Resposta inesperada do servidor.');
+      }
+
     } catch (err: any) {
       const backendMessage = err.response?.data?.message;
-      const displayMessage = Array.isArray(backendMessage) ? backendMessage[0] : backendMessage || 'Falha no login.';
+      const displayMessage = Array.isArray(backendMessage) ? backendMessage[0] : backendMessage || 'Falha no login. Credenciais incorretas?';
       setError(displayMessage);
     } finally {
       setLoading(false);
     }
   };
-
-  // Função para ser passada para o LoginForm
-  const handleForgotPasswordClick = () => {
+    
+  const handleForgotPasswordClick = () => {
     setShowForgotModal(true);
   };
 
@@ -119,7 +131,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* AQUI PASSAMOS A NOVA PROP PARA ABRIR O MODAL */}
           <LoginForm 
             onSubmit={handleLogin} 
             isLoading={loading} 
