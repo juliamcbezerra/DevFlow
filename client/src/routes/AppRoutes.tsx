@@ -3,6 +3,9 @@ import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 // Pages - Auth
 import LoginPage from '../pages/Login';
 import SignupPage from '../pages/Signup';
+import VerificationSentPage from '../pages/VerificationSentPage'; 
+import VerifyEmailPage from '../pages/VerifyEmailPage'; // <--- Nova Rota: Confirmação de Token
+import ResetPasswordPage from '../pages/ResetPasswordPage'; // <--- Nova Rota: Redefinir Senha
 
 // Pages - App
 import Onboarding from '../pages/Onboarding';
@@ -31,12 +34,19 @@ const PrivateLayout = () => (
 export function AppRoutes() {
   return (
     <Routes>
-      {/* --- ROTAS PÚBLICAS --- */}
+      {/* --- ROTAS PÚBLICAS (Autenticação e Recuperação) --- */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<SignupPage />} />
       <Route path="/signup" element={<Navigate to="/register" replace />} />
+      
+      {/* Rotas de Fluxo de Verificação */}
+      <Route path="/verification-sent" element={<VerificationSentPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
-      {/* --- ROTAS PRIVADAS --- */}
+      {/* Rota de Fluxo de Senha */}
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+      {/* --- ROTAS PRIVADAS (Requer Login) --- */}
       <Route element={<PrivateRoute />}>
         
         {/* Onboarding (Sem Navbar) */}
@@ -60,9 +70,9 @@ export function AppRoutes() {
             {/* Chat */}
             <Route path="/chat" element={<ChatPage />} />
 
-            {/* Projetos (Se já tiver criado, descomente) */}
-            { <Route path="/projects/:id" element={<ProjectPage />} /> }
-            { <Route path="/projects" element={<ProjectsPage />} /> }
+            {/* Projetos */}
+            <Route path="/projects/:id" element={<ProjectPage />} />
+            <Route path="/projects" element={<ProjectsPage />} />
 
             {/* Comunidade */}
             <Route path="/community" element={<CommunityPage />} />
@@ -71,7 +81,7 @@ export function AppRoutes() {
 
       </Route>
 
-      {/* 404 */}
+      {/* Rota de Catch-all / 404 (Redireciona para o login se nada mais bater) */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

@@ -19,35 +19,34 @@ export class MailService {
   }
 
   async sendVerificationEmail(email: string, token: string) {
-    const link = `${process.env.FRONTEND_URL}/verify?token=${token}`;
+    const link = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
     const html = getEmailTemplate(
       'Bem-vindo ao DevFlow!',
-      'Estamos muito felizes em ter você conosco. Para começar a explorar a comunidade e compartilhar seus projetos, por favor, verifique seu e-mail.',
+      'Para garantir a segurança da comunidade, precisamos que você confirme seu endereço de e-mail clicando no botão abaixo.',
       link,
-      'Verificar Minha Conta'
+      false // false = mostra botão
     );
 
     await this.transporter.sendMail({
-      from: '"DevFlow Team" <noreply@devflow.com>',
+      from: '"DevFlow Team" <contact.devflow@gmail.com>',
       to: email,
       subject: 'Verifique sua conta no DevFlow 🚀',
       html,
     });
   }
 
-  async sendPasswordResetEmail(email: string, token: string) {
-    const link = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+  async sendPasswordResetCode(email: string, code: string) {
     const html = getEmailTemplate(
-      'Recuperação de Senha',
-      'Recebemos uma solicitação para redefinir sua senha. Se não foi você, ignore este e-mail. Caso contrário, clique abaixo:',
-      link,
-      'Redefinir Senha'
+      'Código de Recuperação',
+      'Recebemos um pedido para redefinir sua senha. Use o código abaixo para continuar:',
+      code,
+      true // true = mostra código gigante
     );
 
     await this.transporter.sendMail({
-      from: '"DevFlow Security" <noreply@devflow.com>',
+      from: '"DevFlow Security" <contact.devflow@gmail.com>',
       to: email,
-      subject: 'Redefinição de Senha 🔒',
+      subject: `Seu código é: ${code} 🔒`,
       html,
     });
   }

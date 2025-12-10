@@ -67,6 +67,10 @@ model User {
   comments Comment[]
   votes    Vote[]
 
+  // Verificação
+  isVerified        Boolean   @default(false)
+  verificationToken String?   // Token para clicar no email de boas vindas
+
   // Senha
   resetCode         String?
   resetCodeExpires  DateTime?
