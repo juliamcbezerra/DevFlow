@@ -7,10 +7,14 @@ import cookieParser from 'cookie-parser';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  if (process.env.NODE_ENV === 'production') {
+    app.setGlobalPrefix('api');
+  }
+
   const port = process.env.SERVER_PORT || 3333;
 
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: process.env.CORS_ORIGIN,
     credentials: true,
   });
   
@@ -33,7 +37,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document); // A doc ficará em /api
+  SwaggerModule.setup('docs', app, document); // A doc ficará em /docs
 
   await app.listen(port);
   console.log(`🚀 Server running on http://localhost:${port}`);
