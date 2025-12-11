@@ -1,13 +1,19 @@
+version: '3.8'
+
 services:
   server:
     build:
       context: ./server
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "${SERVER_PORT}:3333"
       - "5555:5555"
     env_file:
       - ./.env
+    volumes:
+      - ./server:/usr/src/app
+      - server_node_modules:/usr/src/app/node_modules
+    command: npm run start:dev
     depends_on:
       db: 
         condition: service_healthy 
@@ -15,14 +21,15 @@ services:
   client:
     build:
       context: ./client
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL}
-        VITE_SOCKET_URL: ${VITE_SOCKET_URL}
+      dockerfile: Dockerfile.dev
     ports:
       - "${CLIENT_PORT}:5173"
     env_file:
       - ./.env
+    volumes:
+      - ./client:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run dev
 
   db:
     container_name: devflow_db
