@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X, Upload, Link as LinkIcon, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import api from '../../services/api';
 
 interface ImagePickerModalProps {
   isOpen: boolean;
@@ -151,17 +152,23 @@ export function ImagePickerModal({
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const response = await fetch(`http://localhost:3333/uploads/${folderType}`, {
-        method: "POST",
-        credentials: "include",
-        body: formData,
+      // const response = await fetch(`http://localhost:3333/uploads/${folderType}`, {
+      //   method: "POST",
+      //   credentials: "include",
+      //   body: formData,
+      // });
+
+      const response = await api.post(`/uploads/${folderType}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
-      if (!response.ok) {
+      if (response.status !== 200 && response.status !== 201) {
         throw new Error("Erro ao fazer upload");
       }
 
-      const data = await response.json();
+      const data = response.data;
       const imageUrl = data.fileUrl || data.url;
 
       if (!imageUrl) {

@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 // SocketContext.tsx
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
@@ -53,7 +54,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     console.log('🔌 [Socket] Inicializando conexão para: http://localhost:3333');
     console.log('🔍 [Socket] Token encontrado:', token.substring(0, 20) + '...');
 
-    const newSocket = io('http://localhost:3333', {
+    const newSocket = io(import.meta.env.VITE_SOCKET_URL, {
       transports: ['websocket'],
       auth: {
         token: token,

@@ -7,6 +7,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { UploadModule } from './upload/upload.module';
 import { ProjectModule } from './modules/project/project.module';
 import { GatewayModule } from './gateway/gateway.module';
+import { ConfigModule } from '@nestjs/config';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -17,7 +19,12 @@ import { GatewayModule } from './gateway/gateway.module';
     SocialModule,
     ProjectModule,
     GatewayModule,
-    UploadModule
+    UploadModule,
+    ConfigModule.forRoot({
+      envFilePath: join(__dirname, '../../.env'),
+      isGlobal: true,
+      expandVariables: true,
+    })
   ],
   controllers: [],
   providers: [],
