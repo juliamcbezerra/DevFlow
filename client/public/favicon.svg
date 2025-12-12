@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="aurora-main" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6" /> <stop offset="100%" stop-color="#3B82F6" /> </linearGradient>
+    
+    <linearGradient id="aurora-fold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6D28D9" /> 
+      <stop offset="100%" stop-color="#1E40AF" /> 
+    </linearGradient>
+
+    <filter id="soft-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <g filter="url(#soft-glow)" transform="translate(64, 64) scale(0.75)">
+    <path d="M 50 100 L 180 256 L 50 412 L 120 412 L 250 256 L 120 100 Z" fill="url(#aurora-main)" />
+    <path d="M 250 256 L 120 412 L 180 412 L 310 256 Z" fill="url(#aurora-fold)" opacity="0.9" />
+    <path d="M 462 100 L 332 256 L 462 412 L 392 412 L 262 256 L 392 100 Z" fill="url(#aurora-main)" />
+    <path d="M 262 256 L 392 100 L 332 100 L 202 256 Z" fill="url(#aurora-fold)" opacity="0.9" />
+  </g>
+</svg>
